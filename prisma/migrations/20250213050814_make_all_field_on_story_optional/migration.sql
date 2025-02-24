@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Story" ALTER COLUMN "projectId" DROP NOT NULL,
+ALTER COLUMN "type" DROP NOT NULL,
+ALTER COLUMN "generatorStatus" DROP NOT NULL;

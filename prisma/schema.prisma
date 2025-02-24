@@ -1,0 +1,162 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String          @id @default(uuid())
+  username      String          @unique
+  password      String
+  displayName   String
+  role          Role
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  WorkgroupUser WorkgroupUser[]
+  Workgroup     Workgroup[]
+}
+
+model Workgroup {
+  id                  String                @id @default(uuid())
+  name                String
+  session             Int
+  projectStoryPerUser Int
+  managerId           String
+  Manager             User                  @relation(fields: [managerId], references: [id])
+  DistributionGroup   GroupDistribution[]
+  WorkgroupUser       WorkgroupUser[]
+  TaskHistory         TaskHistory[]
+  Project             Project[]
+  ContentDistribution ContentDistribution[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+}
+
+model WorkgroupUser {
+  id                Int                 @id @default(autoincrement())
+  userId            String
+  User              User                @relation(fields: [userId], references: [id])
+  workgroupId       String
+  Workgroup         Workgroup           @relation(fields: [workgroupId], references: [id])
+  isDeleted         Boolean             @default(false)
+  WorkgroupUserTask WorkgroupUserTask[]
+  Project           Project[]
+
+  @@unique([workgroupId, userId])
+}
+
+model GroupDistribution {
+  id                  String                @id @default(uuid())
+  code                String
+  amontOfTroops       Int
+  workgroupId         String
+  Workgroup           Workgroup             @relation(fields: [workgroupId], references: [id])
+  WorkgroupUserTask   WorkgroupUserTask[]
+  ContentDistribution ContentDistribution[]
+
+  @@unique([code, workgroupId])
+}
+
+model TaskHistory {
+  id                Int                 @id @default(autoincrement())
+  createdAt         DateTime            @default(now())
+  workgroupId       String
+  Workgroup         Workgroup           @relation(fields: [workgroupId], references: [id])
+  WorkgroupUserTask WorkgroupUserTask[]
+}
+
+model WorkgroupUserTask {
+  workgroupUserId     Int
+  WorkgroupUser       WorkgroupUser     @relation(fields: [workgroupUserId], references: [id])
+  groupDistributionId String
+  GroupDistribution   GroupDistribution @relation(fields: [groupDistributionId], references: [id])
+  taskHistoryId       Int
+  TaskHistory         TaskHistory       @relation(fields: [taskHistoryId], references: [id])
+
+  @@unique([workgroupUserId, groupDistributionId, taskHistoryId])
+}
+
+model Project {
+  id                  String                @id @default(uuid())
+  name                String
+  status              Boolean               @default(false)
+  workgroupId         String
+  Workgroup           Workgroup             @relation(fields: [workgroupId], references: [id])
+  workgroupUserId     Int
+  WorkgroupUser       WorkgroupUser         @relation(fields: [workgroupUserId], references: [id])
+  Story               Story[]
+  allocationType      AllocationType
+  captions            String[]
+  hashtags            String?
+  ContentDistribution ContentDistribution[]
+
+  @@unique([name, workgroupUserId])
+}
+
+model Story {
+  id                  String                @id @default(uuid())
+  projectId           String
+  Project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ContentDistribution ContentDistribution[]
+  DistributionStory   DistributionStory[]
+}
+
+model DistributionStory {
+  contentDistributionId String
+  ContentDistribution   ContentDistribution @relation(fields: [contentDistributionId], references: [id], onDelete: Cascade)
+  storyId               String
+  Story                 Story               @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  amountOfContents      Int
+  offset                Int
+
+  @@unique([contentDistributionId, storyId])
+}
+
+model ContentDistribution {
+  id                    String              @id @default(uuid())
+  session               Int
+  path                  String
+  workgroupId           String
+  Workgroup             Workgroup           @relation(fields: [workgroupId], references: [id])
+  groupDistributionCode String
+  GroupDistribution     GroupDistribution   @relation(fields: [groupDistributionCode], references: [id])
+  projectId             String
+  Project               Project             @relation(fields: [projectId], references: [id])
+  storyId               String?
+  Story                 Story?              @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  DistributionStory     DistributionStory[]
+
+  @@unique([workgroupId, groupDistributionCode, session, projectId, storyId], name: "uniqueConstraint")
+}
+
+enum Role {
+  MANAGER
+  CREATOR
+  DISTRIBUTOR
+}
+
+enum GeneratorStatus {
+  NOT_GENERATE
+  RUNNING
+  FINISHED
+  ERROR
+}
+
+enum StoryType {
+  USER_GENERATE
+  SYSTEM_GENERATE
+}
+
+enum AllocationType {
+  SPECIFIC
+  GENERIC
+}
