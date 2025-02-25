@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { CreateWorkgroupDto } from './dto/create-workgroup.dto';
+import { CreateWorkgroupRequestDto } from './dto/create-workgroup.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class WorkgroupService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(payload: CreateWorkgroupDto & { managerId: string }) {
+  create(payload: CreateWorkgroupRequestDto & { managerId: string }) {
     return this.prisma.workgroup.create({ data: payload });
   }
 
@@ -36,6 +36,18 @@ export class WorkgroupService {
       role: workgroup.User.role,
       displayName: workgroup.User.displayName,
     }));
+  }
+
+  async addUsers(workgroupId: string, userIds: string[]) {
+    return this.prisma.$transaction(
+      userIds.map((userId) =>
+        this.prisma.workgroupUser.upsert({
+          create: { userId, workgroupId },
+          update: { isDeleted: false },
+          where: { workgroupId_userId: { userId, workgroupId } },
+        }),
+      ),
+    );
   }
 
   async findGroupDistributions(workgroupId: string) {

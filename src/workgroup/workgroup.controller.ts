@@ -8,12 +8,19 @@ import {
   Req,
 } from '@nestjs/common';
 import { WorkgroupService } from './workgroup.service';
-import { CreateWorkgroupDto } from './dto/create-workgroup.dto';
+import {
+  CreateWorkgroupRequestDto,
+  CreateWorkgroupResponseDto,
+} from './dto/create-workgroup.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { FindAllWorkgroupResponseDto } from './dto/findAll-workgroup.dto';
 import { FindUsersResponseDto } from './dto/findUsers-workgroup.dto';
 import { FindGroupDistributionsResponseDto } from './dto/findGroupDistributions-workgroup.dto';
 import { FindUserTasksResponseDto } from './dto/findUserTasks-workgroup.dto';
+import {
+  AddUsersRequestDto,
+  AddUsersResponseDto,
+} from './dto/addUsers-workgroup.dto';
 
 @UseGuards(AuthGuard)
 @Controller('workgroups')
@@ -21,12 +28,16 @@ export class WorkgroupController {
   constructor(private readonly workgroupService: WorkgroupService) {}
 
   @Post()
-  create(@Req() req, @Body() createWorkgroupDto: CreateWorkgroupDto) {
+  async create(
+    @Req() req,
+    @Body() createWorkgroupDto: CreateWorkgroupRequestDto,
+  ): Promise<CreateWorkgroupResponseDto> {
     const user: JwtPayload = req.user;
-    this.workgroupService.create({
+    const data = await this.workgroupService.create({
       ...createWorkgroupDto,
       managerId: user.sub,
     });
+    return { message: 'success', data };
   }
 
   @Get()
@@ -39,6 +50,18 @@ export class WorkgroupController {
   @Get(':id/users')
   async findUsers(@Param('id') id: string): Promise<FindUsersResponseDto> {
     const data = await this.workgroupService.findUsers(id);
+    return { message: 'success', data };
+  }
+
+  @Post(':id/users')
+  async addUsers(
+    @Param('id') id: string,
+    @Body() addUsersRequestDto: AddUsersRequestDto,
+  ): Promise<AddUsersResponseDto> {
+    const data = await this.workgroupService.addUsers(
+      id,
+      addUsersRequestDto.users,
+    );
     return { message: 'success', data };
   }
 

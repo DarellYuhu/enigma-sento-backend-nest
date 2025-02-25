@@ -6,6 +6,7 @@ import { apiReference } from '@scalar/nestjs-api-reference';
 import metadata from './metadata';
 
 async function bootstrap() {
+  await Bun.$`pwd`;
   const app = await NestFactory.create(AppModule);
 
   const envConfig = app.get(ConfigService);
