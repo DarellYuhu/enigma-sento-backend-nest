@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateWorkgroupRequestDto } from './dto/create-workgroup.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { GroupDistribution, WorkgroupUser } from '@prisma/client';
+import { shuffle } from 'lodash';
 
 @Injectable()
 export class WorkgroupService {
@@ -143,5 +145,49 @@ export class WorkgroupService {
       ];
     });
     return Object.fromEntries(normalized);
+  }
+
+  async generateUserTasks(workgroupId: string) {
+    const workgroup = await this.prisma.workgroup.findUnique({
+      where: { id: workgroupId },
+      include: {
+        DistributionGroup: true,
+        WorkgroupUser: {
+          where: { User: { role: 'CREATOR' }, isDeleted: false },
+        },
+      },
+    });
+    if (!workgroup) throw new NotFoundException('Workgroup not found');
+    const distributed = this.distributeGroupDistribution(
+      workgroup.WorkgroupUser,
+      workgroup.DistributionGroup,
+    );
+
+    return await this.prisma.taskHistory.create({
+      data: {
+        workgroupId,
+        WorkgroupUserTask: {
+          createMany: { data: distributed },
+        },
+      },
+    });
+  }
+
+  private distributeGroupDistribution(
+    users: WorkgroupUser[],
+    tasks: GroupDistribution[],
+  ) {
+    const result: { workgroupUserId: number; groupDistributionId: string }[] =
+      [];
+    const randomizedUsers = shuffle(users);
+    let userIndex = 0;
+
+    for (const task of tasks) {
+      const user = randomizedUsers[userIndex];
+      result.push({ workgroupUserId: user.id, groupDistributionId: task.id });
+      userIndex = (userIndex + 1) % randomizedUsers.length;
+    }
+
+    return result;
   }
 }

@@ -21,6 +21,7 @@ import {
   AddUsersRequestDto,
   AddUsersResponseDto,
 } from './dto/addUsers-workgroup.dto';
+import { GenerateUserTasksResponseDto } from './dto/generateUserTasks-workgroup.dto';
 
 @UseGuards(AuthGuard)
 @Controller('workgroups')
@@ -70,6 +71,14 @@ export class WorkgroupController {
     @Param('id') id: string,
   ): Promise<FindGroupDistributionsResponseDto> {
     const data = await this.workgroupService.findGroupDistributions(id);
+    return { message: 'success', data };
+  }
+
+  @Post(':id/user-tasks')
+  async generateUserTasks(
+    @Param('id') id: string,
+  ): Promise<GenerateUserTasksResponseDto> {
+    const data = await this.workgroupService.generateUserTasks(id);
     return { message: 'success', data };
   }
 
