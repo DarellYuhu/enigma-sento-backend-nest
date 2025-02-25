@@ -19,9 +19,12 @@ async function bootstrap() {
     })
     .build();
 
+  app.enableCors({
+    origin: envConfig.get('ALLOWED_ORIGINS'),
+    exposedHeaders: ['Content-Disposition'],
+  });
   await SwaggerModule.loadPluginMetadata(metadata);
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  console.log('huhi');
   SwaggerModule.setup('api', app, document);
 
   app.use(
