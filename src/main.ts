@@ -41,4 +41,4 @@ async function bootstrap() {
 
   await app.listen(envConfig.get('PORT') ?? 3000);
 }
-bootstrap();
+bootstrap().catch(console.error);

@@ -1,4 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateStoryDto } from './dto/create-story.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
@@ -7,14 +12,21 @@ import { S3Client } from 'bun';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { UpdateSectionRequestDto } from './dto/updateSection-story.dto';
+import { random } from 'lodash';
+import { AssetService } from 'src/asset/asset.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { UpdateStoryRequestDto } from './dto/update-story.dot';
 
 @Injectable()
 export class StoryService {
   constructor(
     @InjectModel(Story.name) private story: Model<Story>,
     @Inject('S3_CLIENT') private minioS3: S3Client,
+    @InjectQueue('script-queue') private queue: Queue,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly asset: AssetService,
   ) {}
 
   async create({ data, ...payload }: CreateStoryDto) {
@@ -81,6 +93,17 @@ export class StoryService {
     return `This action returns a #${id} story`;
   }
 
+  async update(id: string, payload: UpdateStoryRequestDto) {
+    const story = await this.story.findById(id);
+    if (!story) throw new NotFoundException('Story not found');
+    if (
+      payload.captions &&
+      payload.captions.length < (story.contentPerStory ?? Infinity)
+    )
+      throw new BadRequestException('Not enough captions');
+    return this.story.findByIdAndUpdate(id, payload, { new: true }).lean();
+  }
+
   async updateSection(
     storyId: string,
     sectionId: string,
@@ -116,6 +139,76 @@ export class StoryService {
       { new: true },
     );
     return section;
+  }
+
+  async generate(storyId: string, withMusic?: boolean) {
+    const story = await this.story.findById(storyId).lean();
+    const project = await this.prisma.project.findFirstOrThrow({
+      where: { Story: { some: { id: storyId } } },
+    });
+    if (!story) throw new NotFoundException('Story not found');
+    if (
+      ((story.type !== 'SYSTEM_GENERATE' ||
+        story.captions?.length < (story.contentPerStory ?? -1)) &&
+        project.allocationType === 'SPECIFIC') ||
+      !story.data
+    )
+      throw new BadRequestException(
+        `You have to provide at least ${story.contentPerStory} captions`,
+      );
+    await this.story.findByIdAndUpdate(storyId, { generatorStatus: 'RUNNING' });
+    const musicPath = withMusic
+      ? (await this.asset.findAllMusic()).map(({ path }) => path)
+      : [];
+    const sections = story.data;
+    const fonts = (await this.asset.findAllFont()).map((item) => item.url);
+    const ContentDistribution = await this.prisma.contentDistribution.findMany({
+      where: {
+        OR: [{ DistributionStory: { some: { storyId } } }, { storyId }],
+      },
+      include: {
+        GroupDistribution: true,
+        DistributionStory: { where: { storyId } },
+      },
+    });
+    const config = {
+      sections: await Promise.all(
+        sections.map(async (item) => ({
+          ...item,
+          images: await Promise.all(
+            item.images.map((imagePath) =>
+              this.minioS3.presign(imagePath.path, {
+                bucket: 'assets',
+                method: 'GET',
+              }),
+            ),
+          ),
+        })),
+      ),
+      font: fonts[random(fonts.length - 1)],
+      captions: story.captions ?? [],
+      hashtags: story.hashtags ?? '',
+      sounds: musicPath.map((path) =>
+        this.minioS3.presign(path, { bucket: 'assets', method: 'GET' }),
+      ),
+      groupDistribution: ContentDistribution.map((item) => {
+        const distributionStory = item.DistributionStory.find(
+          (item) => item.storyId === storyId,
+        );
+        return {
+          amountOfContents:
+            distributionStory?.amountOfContents ??
+            item.GroupDistribution.amontOfTroops,
+          path: distributionStory ? `${item.path}/SG` : item.path,
+          offset: distributionStory?.offset,
+        };
+      }),
+      basePath: `${process.cwd()}/tmp/${storyId}`,
+    };
+
+    await Bun.$`mkdir -p ${config.basePath}`;
+
+    await this.queue.add(storyId, { ...config, storyId });
   }
 
   remove(id: number) {

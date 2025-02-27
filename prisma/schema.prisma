@@ -58,6 +58,7 @@ model GroupDistribution {
   id                  String                @id @default(uuid())
   code                String
   amontOfTroops       Int
+  isDeleted           Boolean               @default(false)
   workgroupId         String
   Workgroup           Workgroup             @relation(fields: [workgroupId], references: [id])
   WorkgroupUserTask   WorkgroupUserTask[]

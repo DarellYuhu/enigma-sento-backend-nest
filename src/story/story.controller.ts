@@ -6,10 +6,12 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { StoryService } from './story.service';
 import { CreateStoryDto } from './dto/create-story.dto';
 import { UpdateSectionRequestDto } from './dto/updateSection-story.dto';
+import { UpdateStoryRequestDto } from './dto/update-story.dot';
 
 @Controller('stories')
 export class StoryController {
@@ -31,6 +33,19 @@ export class StoryController {
     return this.storyService.findOne(+id);
   }
 
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.storyService.remove(+id);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() updateStoryDto: UpdateStoryRequestDto,
+  ) {
+    return this.storyService.update(id, updateStoryDto);
+  }
+
   @Patch(':id/sections/:sectionId')
   updateSection(
     @Param('id') id: string,
@@ -40,8 +55,8 @@ export class StoryController {
     return this.storyService.updateSection(id, sectionId, updateSectionDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.storyService.remove(+id);
+  @Post(':id/generate')
+  generate(@Param('id') id: string, @Query('withMusic') withMusic: boolean) {
+    return this.storyService.generate(id, withMusic);
   }
 }

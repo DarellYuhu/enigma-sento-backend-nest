@@ -5,3 +5,21 @@ type JwtPayload = {
   iat: number;
   exp: number;
 };
+
+type Section = {
+  texts: string[];
+  textColor: string;
+  textBgColor: string;
+  textStroke: string;
+  textPosition: 'random' | 'middle' | 'bottom';
+  images: string[];
+};
+
+type GeneratorConfig = {
+  sections: Section;
+  captions: string[];
+  hashtags: string;
+  sounds: string[];
+  groupDistribution: { amountOfTroops: string; path: string }[];
+  basePath: string;
+};

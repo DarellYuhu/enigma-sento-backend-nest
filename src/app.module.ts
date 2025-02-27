@@ -12,6 +12,9 @@ import { ProjectModule } from './project/project.module';
 import { StoryModule } from './story/story.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { StorageModule } from './storage/storage.module';
+import { AssetModule } from './asset/asset.module';
+import { ContentGeneratorModule } from './content-generator/content-generator.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -22,6 +25,16 @@ import { StorageModule } from './storage/storage.module';
     CollectionModule,
     ProjectModule,
     StoryModule,
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get('REDIS_HOST'),
+          port: config.get('REDIS_PORT'),
+          password: config.get('REDIS_PASSWORD'),
+        },
+      }),
+    }),
     ConfigModule.forRoot({
       envFilePath: ['.env.development', '.env.production'],
       isGlobal: true,
@@ -36,6 +49,8 @@ import { StorageModule } from './storage/storage.module';
       }),
     }),
     StorageModule,
+    AssetModule,
+    ContentGeneratorModule,
   ],
   controllers: [AppController],
   providers: [Logger],
