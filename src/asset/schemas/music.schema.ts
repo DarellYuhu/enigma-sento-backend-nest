@@ -1,6 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
-@Schema()
+@Schema({
+  timestamps: {
+    createdAt: 'addedAt',
+    updatedAt: false,
+  },
+})
 export class Music {
   @Prop()
   title: string;

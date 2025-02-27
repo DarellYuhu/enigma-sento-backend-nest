@@ -15,6 +15,7 @@ import { StorageModule } from './storage/storage.module';
 import { AssetModule } from './asset/asset.module';
 import { ContentGeneratorModule } from './content-generator/content-generator.module';
 import { BullModule } from '@nestjs/bullmq';
+import { TaskModule } from './task/task.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { BullModule } from '@nestjs/bullmq';
     StorageModule,
     AssetModule,
     ContentGeneratorModule,
+    TaskModule,
   ],
   controllers: [AppController],
   providers: [Logger],

@@ -14,8 +14,9 @@ import { UpdateGroupDistributionDto } from './dto/update-group-distribution.dto'
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody } from '@nestjs/swagger';
 import { CreateGroupDistributionDto } from './dto/create-group-distribution.dto';
+import { DownloadGroupDistributionDto } from './dto/download-group-distribution.dto';
 
-@Controller('workgroup/:workgroupId/group-distribution')
+@Controller('workgroups/:workgroupId/group-distributions')
 export class GroupDistributionController {
   constructor(
     private readonly groupDistributionService: GroupDistributionService,
@@ -55,5 +56,17 @@ export class GroupDistributionController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.groupDistributionService.remove(+id);
+  }
+
+  @Post(':id/download')
+  async downloadContents(
+    @Param('id') id: string,
+    @Body() downloadGroupDistributionDto: DownloadGroupDistributionDto,
+  ) {
+    const data = await this.groupDistributionService.downloadContents(
+      id,
+      downloadGroupDistributionDto,
+    );
+    return { message: 'success', data };
   }
 }

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   CreateGroupDistributionDto,
   XlsxFileSchema,
@@ -8,10 +13,18 @@ import * as xlsx from 'xlsx';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { ConfigService } from '@nestjs/config';
+import { format } from 'date-fns';
+import { S3Client } from 'bun';
+import { DownloadGroupDistributionDto } from './dto/download-group-distribution.dto';
 
 @Injectable()
 export class GroupDistributionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+    @Inject('S3_CLIENT') private minioS3: S3Client,
+  ) {}
 
   async create(payload: CreateGroupDistributionDto, workgroupId: string) {
     const buffer = payload.file.buffer;
@@ -41,5 +54,48 @@ export class GroupDistributionService {
 
   remove(id: number) {
     return `This action removes a #${id} groupDistribution`;
+  }
+
+  async downloadContents(id: string, payload: DownloadGroupDistributionDto) {
+    const groupDistribution = await this.prisma.groupDistribution.findUnique({
+      where: { id },
+      include: {
+        Workgroup: {
+          select: { Project: { where: { id: { in: payload.projectIds } } } },
+        },
+      },
+    });
+
+    if (!groupDistribution)
+      throw new NotFoundException('Group distribution not found');
+
+    const basePath = `${process.cwd()}/tmp/download`;
+    await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} alias set myminio http://${this.config.get('MINIO_HOST')}:${this.config.get('MINIO_PORT')} ${this.config.get('MINIO_ACCESS_KEY')} ${this.config.get('MINIO_SECRET_KEY')}`;
+
+    await Promise.all(
+      groupDistribution.Workgroup.Project.map(async ({ name }) => {
+        await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} cp --recursive myminio/generated-content/${groupDistribution.code}/${name} ${basePath}/${groupDistribution.code}`.catch(
+          () => {
+            throw new NotFoundException("Story's contents not found");
+          },
+        );
+      }),
+    );
+    const filename = `${groupDistribution.code}_${format(
+      new Date(),
+      'yyyy-MM-dd',
+    )}.tar.gz`;
+    const path = `${basePath}/${filename}`;
+    await Bun.$`tar -czf ${path} -C ${basePath} ${groupDistribution.code}`;
+    const file = Bun.file(`${path}`);
+    await this.minioS3.write(filename, await file.arrayBuffer(), {
+      bucket: 'tmp',
+    });
+    await Bun.$`rm -rf ${basePath}/`;
+
+    return this.minioS3.presign(filename, {
+      bucket: 'tmp',
+      method: 'GET',
+    });
   }
 }

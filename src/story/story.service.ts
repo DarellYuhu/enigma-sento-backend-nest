@@ -17,6 +17,7 @@ import { AssetService } from 'src/asset/asset.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { UpdateStoryRequestDto } from './dto/update-story.dot';
+import { AddGeneratedContentDto } from './dto/add-generated-content.dto';
 
 @Injectable()
 export class StoryService {
@@ -209,6 +210,66 @@ export class StoryService {
     await Bun.$`mkdir -p ${config.basePath}`;
 
     await this.queue.add(storyId, { ...config, storyId });
+  }
+
+  async addGeneratedContent(storyId: string, payload: AddGeneratedContentDto) {
+    const story = await this.story.findById(storyId).lean();
+    const project = await this.prisma.project.findFirstOrThrow({
+      where: { Story: { some: { id: storyId } } },
+    });
+    if (!story) throw new NotFoundException('Story not found');
+    if (
+      (story.contentPerStory !== payload.files.length ||
+        story.captions?.length < story.contentPerStory) &&
+      project.allocationType === 'SPECIFIC'
+    )
+      throw new BadRequestException('Not enough files or captions');
+    let offset = 0;
+    await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} alias set myminio http://${this.config.get('MINIO_HOST')}:${this.config.get('MINIO_PORT')} ${this.config.get('MINIO_ACCESS_KEY')} ${this.config.get('MINIO_SECRET_KEY')}`;
+    const ContentDistribution = await this.prisma.contentDistribution.findMany({
+      where: {
+        OR: [{ DistributionStory: { some: { storyId } } }, { storyId }],
+      },
+      include: { GroupDistribution: true, DistributionStory: true },
+    });
+    await Promise.all(
+      ContentDistribution.map(async (content) => {
+        const amountOfContents =
+          content.DistributionStory.find((item) => item.storyId === storyId)
+            ?.amountOfContents ?? content.GroupDistribution.amontOfTroops;
+
+        const path =
+          project.allocationType === 'GENERIC'
+            ? `${content.path}/UG`
+            : content.path;
+        const filesPayload = payload.files.slice(
+          offset,
+          amountOfContents + offset,
+        );
+        const texts = story
+          .captions!.slice(offset, amountOfContents + offset)
+          .map((item) => item + ' ' + story.hashtags);
+        offset += amountOfContents;
+        const captions = Buffer.from(texts.join('\n'), 'utf-8');
+        await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} rm --recursive --force myminio/generated-content/${path}`;
+        await this.minioS3.write(`${path}/captions.txt`, captions, {
+          type: 'text/plain',
+          bucket: 'generated-content',
+        });
+        await Promise.all(
+          filesPayload.map(
+            async (file) =>
+              await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} mv "myminio/tmp/${file}" "myminio/generated-content/${path}/${file}"`,
+          ),
+        );
+      }),
+    );
+    const res = await this.story
+      .findByIdAndUpdate(storyId, {
+        generatorStatus: 'FINISHED',
+      })
+      .lean();
+    return res;
   }
 
   remove(id: number) {

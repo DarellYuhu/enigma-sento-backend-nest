@@ -57,6 +57,7 @@ export class WorkgroupService {
       where: { workgroupId },
       include: {
         ContentDistribution: {
+          distinct: ['projectId'],
           select: { Project: true },
         },
       },
