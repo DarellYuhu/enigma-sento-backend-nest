@@ -8,9 +8,9 @@ import { StoryModule } from 'src/story/story.module';
 
 @Module({
   imports: [
+    StoryModule,
     BullModule.registerQueue({ name: 'script-queue' }),
     MinioS3Module,
-    forwardRef(() => StoryModule),
   ],
   controllers: [ContentGeneratorController],
   providers: [ContentGeneratorService, ContentGeneratorConsumer],

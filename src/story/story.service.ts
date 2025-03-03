@@ -24,7 +24,8 @@ export class StoryService {
   constructor(
     @InjectModel(Story.name) private story: Model<Story>,
     @Inject('S3_CLIENT') private minioS3: S3Client,
-    @InjectQueue('script-queue') private queue: Queue,
+    @InjectQueue('script-queue')
+    private queue: Queue,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly asset: AssetService,

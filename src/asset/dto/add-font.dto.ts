@@ -1,6 +1,8 @@
+export class FontRequestData {
+  name: string;
+  path: string;
+}
+
 export class AddFontRequestDto {
-  data: {
-    name: string;
-    path: string;
-  }[];
+  data: FontRequestData[];
 }

@@ -1,0 +1,12 @@
+.env*
+tmp
+node_modules
+docker
+dist
+.vscode
+graph.gv
+mc.exe
+.gitignore
+.dockerignore
+.prettierrc
+sento*.tar.gz

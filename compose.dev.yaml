@@ -1,0 +1,54 @@
+name: enigma-sento-backend
+
+services:
+  app:
+    image: enigma-sento-backend-staging:latest
+    env_file:
+      - .env.development
+    ports:
+      - '2002:2002'
+
+  db-dev:
+    image: postgres:latest
+    env_file:
+      - .env.docker
+    ports:
+      - '5433:5432'
+    volumes:
+      - db-dev-data:/var/lib/postgresql/data
+
+  minio-dev:
+    image: minio/minio:latest
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    env_file:
+      - .env.docker
+    volumes:
+      - minio-dev-data:/data
+    command: server --console-address ":9001" /data
+
+  mongo-dev:
+    image: mongo
+    env_file:
+      - .env.docker
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo-dev-data:/data/db
+
+  redis-dev:
+    image: bitnami/redis
+    env_file:
+      - .env.docker
+    ports:
+      - '6378:6379'
+    volumes:
+      - 'redis-dev-data:/bitnami/redis/data'
+
+volumes:
+  db-dev-data:
+  minio-dev-data:
+  keycloak-dev-data:
+  mongo-dev-data:
+  redis-dev-data:

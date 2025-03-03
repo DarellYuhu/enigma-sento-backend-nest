@@ -36,10 +36,8 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 # dotenv environment variable files
-.env
-.env.development
-.env.test
-.env.production
+.env.*
+!.env.*example
 
 # temp directory
 .temp
@@ -55,3 +53,4 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 tmp
+sento*.tar.gz

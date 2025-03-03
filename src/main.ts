@@ -21,7 +21,7 @@ async function bootstrap() {
     .build();
 
   app.enableCors({
-    origin: envConfig.get('ALLOWED_ORIGINS'),
+    origin: envConfig.get('ALLOWED_ORIGINS').split(','),
     exposedHeaders: ['Content-Disposition'],
   });
   await SwaggerModule.loadPluginMetadata(metadata);
@@ -39,6 +39,6 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(envConfig.get('PORT') ?? 3000);
+  await app.listen(envConfig.get('NEW_PORT') ?? 3000);
 }
 bootstrap().catch(console.error);

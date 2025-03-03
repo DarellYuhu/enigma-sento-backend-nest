@@ -3,7 +3,6 @@ import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { config } from './config';
 import { WorkgroupModule } from './workgroup/workgroup.module';
 import { LoggerMiddleware } from './logger/logger.middleware';
 import { GroupDistributionModule } from './group-distribution/group-distribution.module';
@@ -26,6 +25,10 @@ import { TaskModule } from './task/task.module';
     CollectionModule,
     ProjectModule,
     StoryModule,
+    StorageModule,
+    AssetModule,
+    ContentGeneratorModule,
+    TaskModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -37,9 +40,8 @@ import { TaskModule } from './task/task.module';
       }),
     }),
     ConfigModule.forRoot({
-      envFilePath: ['.env.development', '.env.production'],
+      envFilePath: ['.env.development', '.env.staging', '.env.production'],
       isGlobal: true,
-      load: [config],
       expandVariables: true,
     }),
     MongooseModule.forRootAsync({
@@ -49,10 +51,6 @@ import { TaskModule } from './task/task.module';
         dbName: 'enigma-sento',
       }),
     }),
-    StorageModule,
-    AssetModule,
-    ContentGeneratorModule,
-    TaskModule,
   ],
   controllers: [AppController],
   providers: [Logger],

@@ -5,13 +5,13 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Story, StorySchema } from './schemas/story.schema';
 import { MinioS3Module } from 'src/minio-s3/minio-s3.module';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { ContentGeneratorModule } from 'src/content-generator/content-generator.module';
 import { AssetModule } from 'src/asset/asset.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
     AssetModule,
-    ContentGeneratorModule,
+    BullModule.registerQueue({ name: 'script-queue' }),
     MongooseModule.forFeature([{ name: Story.name, schema: StorySchema }]),
     MinioS3Module,
   ],
