@@ -6,6 +6,7 @@ import { Music, MusicSchema } from './schemas/music.schema';
 import { Font, FontSchema } from './schemas/font.schema';
 import { MinioS3Module } from 'src/minio-s3/minio-s3.module';
 import { Color, ColorSchema } from './schemas/color.schema';
+import { Image, ImageSchema } from './schemas/image.schema';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { Color, ColorSchema } from './schemas/color.schema';
       { name: Music.name, schema: MusicSchema },
       { name: Font.name, schema: FontSchema },
       { name: Color.name, schema: ColorSchema },
+      { name: Image.name, schema: ImageSchema },
     ]),
   ],
   controllers: [AssetController],

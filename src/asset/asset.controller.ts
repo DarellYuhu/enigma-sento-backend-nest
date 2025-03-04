@@ -13,6 +13,7 @@ import { AssetService } from './asset.service';
 import { GetAllMusicResponseDto } from './dto/get-music.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { AddFontRequestDto } from './dto/add-font.dto';
+import { AddImageRequestDto } from './dto/add-image.dto';
 
 @Controller('assets')
 export class AssetController {
@@ -60,5 +61,17 @@ export class AssetController {
   async addColors(@UploadedFile() file: Express.Multer.File) {
     await this.assetService.addColors(file);
     return { message: 'success' };
+  }
+
+  @Post('repurpose/images')
+  async addImages(@Body() addImageRequestDto: AddImageRequestDto) {
+    const data = await this.assetService.addImages(addImageRequestDto);
+    return { message: 'success', data: { created: data } };
+  }
+
+  @Get('repurpose/images')
+  async getImages() {
+    const data = await this.assetService.getImages();
+    return { message: 'success', data };
   }
 }

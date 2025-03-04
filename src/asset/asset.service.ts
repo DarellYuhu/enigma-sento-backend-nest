@@ -5,10 +5,10 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { S3Client } from 'bun';
+import { S3Client, S3File } from 'bun';
 import { parseBuffer } from 'music-metadata';
 import { Music } from './schemas/music.schema';
-import { Model } from 'mongoose';
+import { Model, MongooseError } from 'mongoose';
 import { Font } from './schemas/font.schema';
 import { Color } from './schemas/color.schema';
 import { ConfigService } from '@nestjs/config';
@@ -17,6 +17,9 @@ import * as xlsx from 'xlsx';
 import { plainToInstance } from 'class-transformer';
 import { ColorValidator } from './validator/color.validator';
 import { validate } from 'class-validator';
+import { AddImageRequestDto } from './dto/add-image.dto';
+import { Image } from './schemas/image.schema';
+import sharp from 'sharp';
 
 @Injectable()
 export class AssetService {
@@ -25,6 +28,7 @@ export class AssetService {
     @InjectModel(Music.name) private music: Model<Music>,
     @InjectModel(Font.name) private font: Model<Font>,
     @InjectModel(Color.name) private color: Model<Color>,
+    @InjectModel(Image.name) private image: Model<Image>,
     private readonly config: ConfigService,
   ) {}
 
@@ -101,5 +105,57 @@ export class AssetService {
 
   findAllColor() {
     return this.color.find({}).lean();
+  }
+
+  async addImages(payload: AddImageRequestDto) {
+    const session = await this.image.startSession();
+    session.startTransaction();
+    try {
+      const data = await Promise.all(
+        payload.data.map(async ({ name, path }) => {
+          const file = this.minioS3.file(path, { bucket: 'tmp' });
+          const metadata = await this.getImageMetadata(file);
+          const target = `assets/repurpose/images/${name}`;
+          return { name, path: target, ...metadata };
+        }),
+      );
+      const result = await this.image.insertMany(data);
+      await session.commitTransaction();
+      session.endSession();
+      await Promise.all(
+        payload.data.map(async ({ path, name }) => {
+          const target = `assets/repurpose/images/${name}`;
+          await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} mv myminio/tmp/${path} myminio/${target}`;
+        }),
+      );
+      return result.length;
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      if (error.code === 11000) {
+        throw new ConflictException('Image with the same name already exist!');
+      }
+      throw error;
+    }
+  }
+
+  async getImages() {
+    const data = (await this.image.find().lean()).map((item) => ({
+      ...item,
+      url: this.minioS3.presign(item.path, { method: 'GET' }),
+    }));
+    return data;
+  }
+
+  private async getImageMetadata(file: S3File) {
+    const buff = await file.arrayBuffer();
+    const { width, height, size } = await sharp(buff).metadata();
+
+    return {
+      type: file.type,
+      width,
+      height,
+      size,
+    };
   }
 }

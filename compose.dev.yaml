@@ -1,12 +1,12 @@
 name: enigma-sento-backend
 
 services:
-  app:
-    image: enigma-sento-backend-staging:latest
-    env_file:
-      - .env.development
-    ports:
-      - '2002:2002'
+  # app:
+  #   image: enigma-sento-backend-staging:latest
+  #   env_file:
+  #     - .env.development
+  #   ports:
+  #     - '2002:2002'
 
   db-dev:
     image: postgres:latest
