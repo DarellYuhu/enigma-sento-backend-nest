@@ -1,4 +1,4 @@
-import { Module, Provider } from '@nestjs/common';
+import { Module, OnModuleInit, Provider } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 const S3ClientProvider: Provider = {
@@ -17,4 +17,8 @@ const S3ClientProvider: Provider = {
   providers: [S3ClientProvider],
   exports: ['S3_CLIENT'],
 })
-export class MinioS3Module {}
+export class MinioS3Module implements OnModuleInit {
+  async onModuleInit() {
+    await Bun.$`${process.env.MINIO_CLIENT_COMMAND} alias set myminio http://${process.env.MINIO_HOST}:${process.env.MINIO_PORT} ${process.env.MINIO_ACCESS_KEY} ${process.env.MINIO_SECRET_KEY}`;
+  }
+}

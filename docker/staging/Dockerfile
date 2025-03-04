@@ -170,8 +170,7 @@ COPY . .
 RUN bun build.ts
 
 FROM base AS release
-# add minio client
-# RUN apt-get update && apt-get install -y curl ffmpeg libsm6 libxext6
+RUN apt-get update && apt-get install -y curl ffmpeg libsm6 libxext6
 
 COPY --from=install /temp/prod/node_modules ./node_modules
 RUN ls -l node_modules
@@ -187,6 +186,8 @@ RUN pip install -r ./scripts/requirements.txt
 RUN python --version && pip3 --version && mc --version
 
 # run the app
+RUN mkdir ./tmp
+RUN mkdir ./dist/tmp
 RUN useradd -m enigma && chown -R enigma /app
 USER enigma
 EXPOSE 2002/tcp

@@ -19,7 +19,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "docker:build:staging": "docker build -t sento-backend-staging:latest -f docker/staging/Dockerfile .",
+    "docker:build:staging": "docker build -t darellyuhu/sento-backend-staging:latest -f docker/staging/Dockerfile .",
     "docker:save:staging": "docker image save sento-backend-staging:latest | gzip > sento-backend-staging.tar.gz",
     "up:dev": "docker compose -f compose.dev.yaml up -d",
     "down:dev": "docker compose -f compose.dev.yaml down",
@@ -48,6 +48,7 @@
     "music-metadata": "^10.9.1",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
+    "sharp": "^0.33.5",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

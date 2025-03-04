@@ -52,6 +52,13 @@ export class WorkgroupService {
     );
   }
 
+  async deleteUser(workgroupId: string, userId: string) {
+    return this.prisma.workgroupUser.update({
+      where: { workgroupId_userId: { workgroupId, userId } },
+      data: { isDeleted: true },
+    });
+  }
+
   async findGroupDistributions(workgroupId: string) {
     const groupDistributions = await this.prisma.groupDistribution.findMany({
       where: { workgroupId },
@@ -78,7 +85,6 @@ export class WorkgroupService {
       where: { id: workgroupId },
       include: {
         TaskHistory: {
-          orderBy: { createdAt: 'desc' },
           include: {
             WorkgroupUserTask: {
               include: {

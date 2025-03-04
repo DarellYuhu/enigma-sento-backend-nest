@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   Req,
+  Delete,
 } from '@nestjs/common';
 import { WorkgroupService } from './workgroup.service';
 import {
@@ -64,6 +65,15 @@ export class WorkgroupController {
       addUsersRequestDto.users,
     );
     return { message: 'success', data };
+  }
+
+  @Delete(':id/users/:userId')
+  async deleteUser(
+    @Param('id') workgroupId: string,
+    @Param('userId') userId: string,
+  ) {
+    await this.workgroupService.deleteUser(workgroupId, userId);
+    return { message: 'ok' };
   }
 
   @Get(':id/group-distributions')
