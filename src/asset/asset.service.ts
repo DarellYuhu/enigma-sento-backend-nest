@@ -23,6 +23,8 @@ import sharp from 'sharp';
 import { Video } from './schemas/video.schema';
 import ffmpeg from 'fluent-ffmpeg';
 import { AddVideoRequestDto } from './dto/add-video.dto';
+import { AddBannerRequestDto } from './dto/add-banner.dto';
+import { Banner } from './schemas/banner.schema';
 
 @Injectable()
 export class AssetService {
@@ -33,6 +35,7 @@ export class AssetService {
     @InjectModel(Color.name) private color: Model<Color>,
     @InjectModel(Image.name) private image: Model<Image>,
     @InjectModel(Video.name) private video: Model<Video>,
+    @InjectModel(Banner.name) private banner: Model<Banner>,
     private readonly config: ConfigService,
   ) {}
 
@@ -187,6 +190,46 @@ export class AssetService {
 
   async getVideos() {
     const data = (await this.video.find().lean()).map((item) => ({
+      ...item,
+      url: this.minioS3.presign(item.path, { method: 'GET' }),
+    }));
+    return data;
+  }
+
+  async addBanners(payload: AddBannerRequestDto) {
+    const session = await this.banner.startSession();
+    session.startTransaction();
+    try {
+      const data = await Promise.all(
+        payload.data.map(async ({ name, path }) => {
+          const file = this.minioS3.file(path, { bucket: 'tmp' });
+          const metadata = await this.getImageMetadata(file);
+          const target = `assets/repurpose/banners/${name}`;
+          return { name, path: target, ...metadata };
+        }),
+      );
+      const result = await this.banner.insertMany(data);
+      await session.commitTransaction();
+      session.endSession();
+      await Promise.all(
+        payload.data.map(async ({ path, name }) => {
+          const target = `assets/repurpose/banners/${name}`;
+          await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} mv myminio/tmp/${path} myminio/${target}`;
+        }),
+      );
+      return result.length;
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      if (error.code === 11000) {
+        throw new ConflictException('Banner with the same name already exist!');
+      }
+      throw error;
+    }
+  }
+
+  async getBanners() {
+    const data = (await this.banner.find().lean()).map((item) => ({
       ...item,
       url: this.minioS3.presign(item.path, { method: 'GET' }),
     }));

@@ -15,6 +15,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { AddFontRequestDto } from './dto/add-font.dto';
 import { AddImageRequestDto } from './dto/add-image.dto';
 import { AddVideoRequestDto } from './dto/add-video.dto';
+import { AddBannerRequestDto } from './dto/add-banner.dto';
 
 @Controller('assets')
 export class AssetController {
@@ -85,6 +86,18 @@ export class AssetController {
   @Get('repurpose/videos')
   async getVideos() {
     const data = await this.assetService.getVideos();
+    return { message: 'success', data };
+  }
+
+  @Post('repurpose/banners')
+  async addBanners(@Body() addBannerRequestDto: AddBannerRequestDto) {
+    const data = await this.assetService.addBanners(addBannerRequestDto);
+    return { message: 'success', data: { created: data } };
+  }
+
+  @Get('repurpose/banners')
+  async getBanners() {
+    const data = await this.assetService.getBanners();
     return { message: 'success', data };
   }
 }

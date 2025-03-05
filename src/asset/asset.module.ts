@@ -8,6 +8,7 @@ import { MinioS3Module } from 'src/minio-s3/minio-s3.module';
 import { Color, ColorSchema } from './schemas/color.schema';
 import { Image, ImageSchema } from './schemas/image.schema';
 import { Video, VideoSchema } from './schemas/video.schema';
+import { Banner, BannerSchema } from './schemas/banner.schema';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { Video, VideoSchema } from './schemas/video.schema';
       { name: Color.name, schema: ColorSchema },
       { name: Image.name, schema: ImageSchema },
       { name: Video.name, schema: VideoSchema },
+      { name: Banner.name, schema: BannerSchema },
     ]),
   ],
   controllers: [AssetController],
