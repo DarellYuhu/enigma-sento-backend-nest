@@ -14,6 +14,7 @@ import { GetAllMusicResponseDto } from './dto/get-music.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { AddFontRequestDto } from './dto/add-font.dto';
 import { AddImageRequestDto } from './dto/add-image.dto';
+import { AddVideoRequestDto } from './dto/add-video.dto';
 
 @Controller('assets')
 export class AssetController {
@@ -72,6 +73,18 @@ export class AssetController {
   @Get('repurpose/images')
   async getImages() {
     const data = await this.assetService.getImages();
+    return { message: 'success', data };
+  }
+
+  @Post('repurpose/videos')
+  async addVideos(@Body() addVideoRequestDto: AddVideoRequestDto) {
+    const data = await this.assetService.addVideos(addVideoRequestDto);
+    return { message: 'success', data: { created: data } };
+  }
+
+  @Get('repurpose/videos')
+  async getVideos() {
+    const data = await this.assetService.getVideos();
     return { message: 'success', data };
   }
 }

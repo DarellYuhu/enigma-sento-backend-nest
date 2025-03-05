@@ -36,7 +36,6 @@ export class StoryService {
       where: { id: payload.projectId },
     });
     const id = new mongoose.Types.ObjectId();
-    await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} alias set myminio http://${this.config.get('MINIO_HOST')}:${this.config.get('MINIO_PORT')} ${this.config.get('MINIO_ACCESS_KEY')} ${this.config.get('MINIO_SECRET_KEY')}`;
     const section = data
       ? await Promise.all(
           data.map(async (item) => {
@@ -111,7 +110,6 @@ export class StoryService {
     sectionId: string,
     data: UpdateSectionRequestDto,
   ) {
-    await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} alias set myminio http://${this.config.get('MINIO_HOST')}:${this.config.get('MINIO_PORT')} ${this.config.get('MINIO_ACCESS_KEY')} ${this.config.get('MINIO_SECRET_KEY')}`;
     if (data.deletedImages) {
       await Promise.all(
         data.deletedImages.map(async (image) => {
@@ -226,7 +224,6 @@ export class StoryService {
     )
       throw new BadRequestException('Not enough files or captions');
     let offset = 0;
-    await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} alias set myminio http://${this.config.get('MINIO_HOST')}:${this.config.get('MINIO_PORT')} ${this.config.get('MINIO_ACCESS_KEY')} ${this.config.get('MINIO_SECRET_KEY')}`;
     const ContentDistribution = await this.prisma.contentDistribution.findMany({
       where: {
         OR: [{ DistributionStory: { some: { storyId } } }, { storyId }],

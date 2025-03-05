@@ -70,7 +70,6 @@ export class GroupDistributionService {
       throw new NotFoundException('Group distribution not found');
 
     const basePath = `${process.cwd()}/tmp/download`;
-    await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} alias set myminio http://${this.config.get('MINIO_HOST')}:${this.config.get('MINIO_PORT')} ${this.config.get('MINIO_ACCESS_KEY')} ${this.config.get('MINIO_SECRET_KEY')}`;
 
     await Promise.all(
       groupDistribution.Workgroup.Project.map(async ({ name }) => {

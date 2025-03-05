@@ -8,7 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { S3Client, S3File } from 'bun';
 import { parseBuffer } from 'music-metadata';
 import { Music } from './schemas/music.schema';
-import { Model, MongooseError } from 'mongoose';
+import { Model } from 'mongoose';
 import { Font } from './schemas/font.schema';
 import { Color } from './schemas/color.schema';
 import { ConfigService } from '@nestjs/config';
@@ -20,6 +20,9 @@ import { validate } from 'class-validator';
 import { AddImageRequestDto } from './dto/add-image.dto';
 import { Image } from './schemas/image.schema';
 import sharp from 'sharp';
+import { Video } from './schemas/video.schema';
+import ffmpeg from 'fluent-ffmpeg';
+import { AddVideoRequestDto } from './dto/add-video.dto';
 
 @Injectable()
 export class AssetService {
@@ -29,6 +32,7 @@ export class AssetService {
     @InjectModel(Font.name) private font: Model<Font>,
     @InjectModel(Color.name) private color: Model<Color>,
     @InjectModel(Image.name) private image: Model<Image>,
+    @InjectModel(Video.name) private video: Model<Video>,
     private readonly config: ConfigService,
   ) {}
 
@@ -66,7 +70,6 @@ export class AssetService {
   }
 
   async addFonts(payload: AddFontRequestDto) {
-    await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} alias set myminio http://${this.config.get('MINIO_HOST')}:${this.config.get('MINIO_PORT')} ${this.config.get('MINIO_ACCESS_KEY')} ${this.config.get('MINIO_SECRET_KEY')}`;
     const data = await Promise.all(
       payload.data.map(async (file) => {
         const target = `assets/all/fonts/${file.name}`;
@@ -147,6 +150,49 @@ export class AssetService {
     return data;
   }
 
+  async addVideos(payload: AddVideoRequestDto) {
+    const session = await this.video.startSession();
+    session.startTransaction();
+    try {
+      const data = await Promise.all(
+        payload.data.map(async ({ name, path }) => {
+          const file = this.minioS3.presign(path, {
+            bucket: 'tmp',
+            method: 'GET',
+          });
+          const metadata = await this.getVideoMetadata(file);
+          const target = `assets/repurpose/videos/${name}`;
+          return { name, path: target, ...metadata };
+        }),
+      );
+      const result = await this.video.insertMany(data);
+      await session.commitTransaction();
+      session.endSession();
+      await Promise.all(
+        payload.data.map(async ({ path, name }) => {
+          const target = `assets/repurpose/videos/${name}`;
+          await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} mv myminio/tmp/${path} myminio/${target}`;
+        }),
+      );
+      return result.length;
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      if (error.code === 11000) {
+        throw new ConflictException('Image with the same name already exist!');
+      }
+      throw error;
+    }
+  }
+
+  async getVideos() {
+    const data = (await this.video.find().lean()).map((item) => ({
+      ...item,
+      url: this.minioS3.presign(item.path, { method: 'GET' }),
+    }));
+    return data;
+  }
+
   private async getImageMetadata(file: S3File) {
     const buff = await file.arrayBuffer();
     const { width, height, size } = await sharp(buff).metadata();
@@ -156,6 +202,23 @@ export class AssetService {
       width,
       height,
       size,
+    };
+  }
+
+  private async getVideoMetadata(source: string) {
+    const data: ffmpeg.FfprobeData = await new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(source, (err, metadata) => {
+        if (err) reject(err);
+        resolve(metadata);
+      });
+    });
+
+    return {
+      type: data.streams[0].codec_name,
+      width: data.streams[0].width,
+      height: data.streams[0].height,
+      size: data.format.size,
+      duration: data.format.duration,
     };
   }
 }
