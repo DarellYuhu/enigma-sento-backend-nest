@@ -1,15 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Collection } from './schemas/collection.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class CollectionService {
+  constructor(
+    @InjectModel(Collection.name) private collection: Model<Collection>,
+  ) {}
+
   create(createCollectionDto: CreateCollectionDto) {
-    return 'This action adds a new collection';
+    return this.collection.create(createCollectionDto);
   }
 
-  findAll() {
-    return `This action returns all collection`;
+  findAll(query: { type: CollectionType }) {
+    return this.collection.find({ type: query.type }).lean();
   }
 
   findOne(id: number) {

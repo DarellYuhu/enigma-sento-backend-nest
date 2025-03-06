@@ -1,4 +1,4 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ContentGeneratorService } from './content-generator.service';
 import { ContentGeneratorController } from './content-generator.controller';
 import { BullModule } from '@nestjs/bullmq';

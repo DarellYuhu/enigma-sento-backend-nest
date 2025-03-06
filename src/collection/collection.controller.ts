@@ -6,23 +6,26 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { CollectionService } from './collection.service';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 
-@Controller('collection')
+@Controller('collections')
 export class CollectionController {
   constructor(private readonly collectionService: CollectionService) {}
 
   @Post()
-  create(@Body() createCollectionDto: CreateCollectionDto) {
-    return this.collectionService.create(createCollectionDto);
+  async create(@Body() createCollectionDto: CreateCollectionDto) {
+    const data = await this.collectionService.create(createCollectionDto);
+    return { message: 'success', data };
   }
 
   @Get()
-  findAll() {
-    return this.collectionService.findAll();
+  async findAll(@Query('assetType') assetType: CollectionType) {
+    const data = await this.collectionService.findAll({ type: assetType });
+    return { message: 'success', data };
   }
 
   @Get(':id')

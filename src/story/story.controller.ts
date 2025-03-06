@@ -36,7 +36,7 @@ export class StoryController {
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.storyService.remove(+id);
+    return this.storyService.remove(id);
   }
 
   @Patch(':id')

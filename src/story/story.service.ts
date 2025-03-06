@@ -270,7 +270,17 @@ export class StoryService {
     return res;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} story`;
+  async remove(id: string) {
+    const data = await this.story.findOneAndDelete({ _id: id });
+    await Promise.all(
+      data.data.map((item) =>
+        Promise.all(
+          item.images.map(async (image) => {
+            await this.minioS3.delete(image.path, { bucket: 'assets' });
+          }),
+        ),
+      ),
+    );
+    return await this.prisma.story.delete({ where: { id } });
   }
 }

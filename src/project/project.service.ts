@@ -143,9 +143,10 @@ export class ProjectService {
                 const path = `${code}/${project.name}/${index + 1}`;
 
                 if (project.allocationType === 'GENERIC') {
-                  const amountOfContents = Math.floor(
+                  const devided = Math.floor(
                     amontOfTroops / randomizedStory.length,
                   );
+                  const amountOfContents = devided === 0 ? 1 : devided;
                   const modulo = amontOfTroops % randomizedStory.length;
                   let offset = 0;
                   const payload = randomizedStory.map(({ id: storyId }) => {
