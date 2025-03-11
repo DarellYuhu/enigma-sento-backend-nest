@@ -125,7 +125,7 @@ export class ProjectService {
     } = project;
 
     let storyIndex = 0;
-    const map: Map<string, number> = new Map();
+    const contentForEachStory: Map<string, number> = new Map();
     const randomizedStory = shuffle(prismaStory);
 
     const storyDistribution = await Promise.all(
@@ -143,38 +143,52 @@ export class ProjectService {
                 const path = `${code}/${project.name}/${index + 1}`;
 
                 if (project.allocationType === 'GENERIC') {
-                  const devided = Math.floor(
-                    amontOfTroops / randomizedStory.length,
-                  );
-                  const amountOfContents = devided === 0 ? 1 : devided;
-                  const modulo = amontOfTroops % randomizedStory.length;
+                  const mappedStory = new Map<string, number>();
+                  let storyIndex = 0;
                   let offset = 0;
-                  const payload = randomizedStory.map(({ id: storyId }) => {
-                    const data = {
-                      amountOfContents,
-                      offset,
-                      storyId,
-                    };
-                    offset += amountOfContents;
-                    return data;
-                  });
-                  if (modulo > 0) {
-                    Array.from({ length: modulo }).forEach(
-                      (_, idx) => (payload[idx].amountOfContents += 1),
-                    );
-                  }
-                  payload.forEach((item) => {
-                    if (map.has(item.storyId)) {
-                      const value = map.get(item.storyId);
-                      map.set(item.storyId, value! + item.amountOfContents);
+                  Array.from({ length: amontOfTroops }).forEach((_, idx) => {
+                    if (mappedStory.has(randomizedStory[storyIndex].id)) {
+                      const value = mappedStory.get(
+                        randomizedStory[storyIndex].id,
+                      );
+                      mappedStory.set(
+                        randomizedStory[storyIndex].id,
+                        value! + 1,
+                      );
                     } else {
-                      map.set(item.storyId, item.amountOfContents);
+                      mappedStory.set(randomizedStory[storyIndex].id, 1);
+                    }
+                    storyIndex = (storyIndex + 1) % randomizedStory.length;
+                  });
+
+                  const payload = Array.from(mappedStory).map(
+                    ([storyId, amountOfContents]) => {
+                      const data = {
+                        amountOfContents,
+                        storyId,
+                        offset,
+                      };
+                      offset += amountOfContents;
+                      return data;
+                    },
+                  );
+                  payload.forEach((item) => {
+                    if (contentForEachStory.has(item.storyId)) {
+                      const value = contentForEachStory.get(item.storyId);
+                      contentForEachStory.set(
+                        item.storyId,
+                        value! + item.amountOfContents,
+                      );
+                    } else {
+                      contentForEachStory.set(
+                        item.storyId,
+                        item.amountOfContents,
+                      );
                     }
                   });
                   const texts = project.captions?.map(
                     (item) => item + ' ' + project.hashtags,
                   );
-                  offset += amountOfContents;
                   const captions = Buffer.from(texts.join('\n'), 'utf-8');
                   await this.minioS3.write(`${path}/captions.txt`, captions, {
                     type: 'text/plain',
@@ -192,14 +206,19 @@ export class ProjectService {
                   };
                 }
 
-                if (map.has(randomizedStory[storyIndex].id)) {
-                  const value = map.get(randomizedStory[storyIndex].id);
-                  map.set(
+                if (contentForEachStory.has(randomizedStory[storyIndex].id)) {
+                  const value = contentForEachStory.get(
+                    randomizedStory[storyIndex].id,
+                  );
+                  contentForEachStory.set(
                     randomizedStory[storyIndex].id,
                     value! + amontOfTroops,
                   );
                 } else {
-                  map.set(randomizedStory[storyIndex].id, amontOfTroops);
+                  contentForEachStory.set(
+                    randomizedStory[storyIndex].id,
+                    amontOfTroops,
+                  );
                 }
 
                 const data = {
@@ -222,7 +241,7 @@ export class ProjectService {
     const payload = storyDistribution.flat();
 
     await Promise.all(
-      Array.from(map, ([key, value]) => {
+      Array.from(contentForEachStory, ([key, value]) => {
         return this.story.updateOne(
           {
             _id: key,

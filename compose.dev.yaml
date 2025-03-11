@@ -1,12 +1,35 @@
 name: enigma-sento-backend
 
 services:
-  # app:
-  #   image: enigma-sento-backend-staging:latest
-  #   env_file:
-  #     - .env.development
-  #   ports:
-  #     - '2002:2002'
+  tei-dev:
+    image: ghcr.io/huggingface/text-embeddings-inference:1.6
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - tei-dev-data:/data
+    ports:
+      - 8080:80
+    command: ['--model-id=sentence-transformers/all-MiniLM-L6-v2']
+
+  vector-db-dev:
+    image: qdrant/qdrant:latest
+    ports:
+      - 6333:6333
+      - 6334:6334
+    expose:
+      - 6333
+      - 6334
+      - 6335
+    configs:
+      - source: qdrant_config
+        target: /qdrant/config/production.toml
+    volumes:
+      - vector-db-dev-data:/qdrant/storage
 
   db-dev:
     image: postgres:latest
@@ -52,3 +75,10 @@ volumes:
   keycloak-dev-data:
   mongo-dev-data:
   redis-dev-data:
+  tei-dev-data:
+  vector-db-dev-data:
+
+configs:
+  qdrant_config:
+    content: |
+      log_level: INFO

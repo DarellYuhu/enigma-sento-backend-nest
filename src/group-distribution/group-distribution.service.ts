@@ -37,6 +37,7 @@ export class GroupDistributionService {
 
     return this.prisma.groupDistribution.createManyAndReturn({
       data: instance.data.map((item) => ({ ...item, workgroupId })),
+      skipDuplicates: true,
     });
   }
 
