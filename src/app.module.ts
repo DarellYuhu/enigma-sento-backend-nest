@@ -15,6 +15,8 @@ import { AssetModule } from './asset/asset.module';
 import { ContentGeneratorModule } from './content-generator/content-generator.module';
 import { BullModule } from '@nestjs/bullmq';
 import { TaskModule } from './task/task.module';
+import { AiModule } from './ai/ai.module';
+import { QdrantModule } from './qdrant/qdrant.module';
 
 @Module({
   imports: [
@@ -51,6 +53,8 @@ import { TaskModule } from './task/task.module';
         dbName: 'enigma-sento',
       }),
     }),
+    AiModule,
+    QdrantModule,
   ],
   controllers: [AppController],
   providers: [Logger],

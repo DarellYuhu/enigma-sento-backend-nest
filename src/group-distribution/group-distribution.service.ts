@@ -35,10 +35,20 @@ export class GroupDistributionService {
     const errors = await validate(instance);
     if (errors.length > 0) throw new BadRequestException('Invalid model');
 
-    return this.prisma.groupDistribution.createManyAndReturn({
-      data: instance.data.map((item) => ({ ...item, workgroupId })),
-      skipDuplicates: true,
-    });
+    return await this.prisma.$transaction(
+      instance.data.map((item) =>
+        this.prisma.groupDistribution.upsert({
+          create: { ...item, workgroupId },
+          update: { isDeleted: false, amontOfTroops: item.amontOfTroops },
+          where: {
+            code_workgroupId: {
+              code: item.code,
+              workgroupId,
+            },
+          },
+        }),
+      ),
+    );
   }
 
   findAll() {
@@ -53,8 +63,11 @@ export class GroupDistributionService {
     return `This action updates a #${id} groupDistribution`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} groupDistribution`;
+  remove(id: string) {
+    return this.prisma.groupDistribution.update({
+      where: { id },
+      data: { isDeleted: true },
+    });
   }
 
   async downloadContents(id: string, payload: DownloadGroupDistributionDto) {

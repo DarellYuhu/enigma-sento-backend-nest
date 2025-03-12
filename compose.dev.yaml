@@ -1,8 +1,28 @@
 name: enigma-sento-backend
 
 services:
+  clip-dev:
+    networks:
+      - yuhu
+    image: jinaai/clip-server:latest
+    ports:
+      - 5100:51000
+    volumes:
+      - ~/.cache:/home/cas/.cache
+      - ./torch-flow.yml:/cas/torch-flow.yml
+    command: ['/cas/torch-flow.yml']
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
   tei-dev:
     image: ghcr.io/huggingface/text-embeddings-inference:1.6
+    networks:
+      - yuhu
     deploy:
       resources:
         reservations:
@@ -32,6 +52,8 @@ services:
       - vector-db-dev-data:/qdrant/storage
 
   db-dev:
+    networks:
+      - yuhu
     image: postgres:latest
     env_file:
       - .env.docker
@@ -41,6 +63,8 @@ services:
       - db-dev-data:/var/lib/postgresql/data
 
   minio-dev:
+    networks:
+      - yuhu
     image: minio/minio:latest
     ports:
       - '9000:9000'
@@ -52,6 +76,8 @@ services:
     command: server --console-address ":9001" /data
 
   mongo-dev:
+    networks:
+      - yuhu
     image: mongo
     env_file:
       - .env.docker
@@ -61,6 +87,8 @@ services:
       - mongo-dev-data:/data/db
 
   redis-dev:
+    networks:
+      - yuhu
     image: bitnami/redis
     env_file:
       - .env.docker
@@ -68,6 +96,10 @@ services:
       - '6378:6379'
     volumes:
       - 'redis-dev-data:/bitnami/redis/data'
+
+networks:
+  yuhu:
+    driver: bridge
 
 volumes:
   db-dev-data:
@@ -77,6 +109,7 @@ volumes:
   redis-dev-data:
   tei-dev-data:
   vector-db-dev-data:
+  clip-dev-data:
 
 configs:
   qdrant_config:

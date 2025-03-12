@@ -8,7 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { S3Client, S3File } from 'bun';
 import { parseBuffer } from 'music-metadata';
 import { Music } from './schemas/music.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Font } from './schemas/font.schema';
 import { Color } from './schemas/color.schema';
 import { ConfigService } from '@nestjs/config';
@@ -17,14 +17,19 @@ import * as xlsx from 'xlsx';
 import { plainToInstance } from 'class-transformer';
 import { ColorValidator } from './validator/color.validator';
 import { validate } from 'class-validator';
-import { AddImageRequestDto } from './dto/add-image.dto';
-import { Image } from './schemas/image.schema';
+import { AddRepImageRequestDto } from './dto/add-rep-image.dto';
+import { RepImage } from './schemas/rep-image.schema';
 import sharp from 'sharp';
 import { Video } from './schemas/video.schema';
 import ffmpeg from 'fluent-ffmpeg';
 import { AddVideoRequestDto } from './dto/add-video.dto';
 import { AddBannerRequestDto } from './dto/add-banner.dto';
 import { Banner } from './schemas/banner.schema';
+import { AddImageRequestDto } from './dto/add-image.dto';
+import { Image } from './schemas/image.schema';
+import { QdrantClient } from '@qdrant/js-client-rest';
+import { AiService } from 'src/ai/ai.service';
+import { QdrantService } from 'src/qdrant/qdrant.service';
 
 @Injectable()
 export class AssetService {
@@ -33,9 +38,12 @@ export class AssetService {
     @InjectModel(Music.name) private music: Model<Music>,
     @InjectModel(Font.name) private font: Model<Font>,
     @InjectModel(Color.name) private color: Model<Color>,
+    @InjectModel(RepImage.name) private repImage: Model<RepImage>,
     @InjectModel(Image.name) private image: Model<Image>,
     @InjectModel(Video.name) private video: Model<Video>,
     @InjectModel(Banner.name) private banner: Model<Banner>,
+    private readonly qdrantService: QdrantService,
+    private readonly aiService: AiService,
     private readonly config: ConfigService,
   ) {}
 
@@ -113,8 +121,77 @@ export class AssetService {
     return this.color.find({}).lean();
   }
 
+  async getImages(payload: { query: string }) {
+    let ids: string[] = [];
+    let filter = {};
+    if (payload.query) {
+      const [text, img] = await Promise.all([
+        this.aiService.embeddingText(payload.query),
+        this.aiService.embeddingImage({ text: payload.query }),
+      ]);
+      const result = await Promise.all([
+        this.qdrantService.query('text-based', text, 0.7),
+        this.qdrantService.query('image-based', img, 0.2),
+      ]);
+      ids = result.flat();
+      filter = { _id: { $in: ids } };
+    }
+    const data = (await this.image.find(filter).lean()).map((item) => ({
+      ...item,
+      url: this.minioS3.presign(item.path, { method: 'GET' }),
+    }));
+    return data;
+  }
+
   async addImages(payload: AddImageRequestDto) {
-    const session = await this.image.startSession();
+    const data = await Promise.all(
+      payload.data.map(async ({ name, path, ...item }) => {
+        const _id = new Types.ObjectId();
+        const file = this.minioS3.file(path, { bucket: 'tmp' });
+        const metadata = await this.getImageMetadata(file);
+        const target = `assets/all/images/${name}`;
+        const imgUrl = this.minioS3.presign(path, {
+          method: 'GET',
+          bucket: 'tmp',
+        });
+        const vectors = await Promise.all([
+          this.aiService.embeddingImage({ uri: imgUrl }),
+          this.aiService.embeddingText(item.description),
+          ...item.tags.map((t) => this.aiService.embeddingText(t)),
+        ]);
+        return { _id, name, path: target, vectors, ...metadata, ...item };
+      }),
+    );
+    const [imgVector, ...txtVectors] = data.flatMap((item) =>
+      item.vectors.map((vector) => ({ storyId: item._id.toString(), vector })),
+    );
+    await this.qdrantService.createCollection('image-based', {
+      vectors: { size: 512, distance: 'Cosine' },
+    });
+    await this.qdrantService.createCollection('text-based', {
+      vectors: { size: 384, distance: 'Cosine' },
+    });
+    await this.qdrantService.insertData({
+      collectionName: 'image-based',
+      points: [imgVector],
+    });
+    await this.qdrantService.insertData({
+      collectionName: 'text-based',
+      points: txtVectors,
+    });
+    const mongoPayload = data.map(({ vectors, ...item }) => item);
+    const result = await this.image.insertMany(mongoPayload);
+    await Promise.all(
+      payload.data.map(async ({ path, name }) => {
+        const target = `assets/all/images/${name}`;
+        await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} mv myminio/tmp/${path} myminio/${target}`;
+      }),
+    );
+    return result.length;
+  }
+
+  async addRepImages(payload: AddRepImageRequestDto) {
+    const session = await this.repImage.startSession();
     session.startTransaction();
     try {
       const data = await Promise.all(
@@ -125,7 +202,7 @@ export class AssetService {
           return { name, path: target, ...metadata };
         }),
       );
-      const result = await this.image.insertMany(data);
+      const result = await this.repImage.insertMany(data);
       await session.commitTransaction();
       session.endSession();
       await Promise.all(
@@ -145,8 +222,8 @@ export class AssetService {
     }
   }
 
-  async getImages() {
-    const data = (await this.image.find().lean()).map((item) => ({
+  async getRepImages() {
+    const data = (await this.repImage.find().lean()).map((item) => ({
       ...item,
       url: this.minioS3.presign(item.path, { method: 'GET' }),
     }));

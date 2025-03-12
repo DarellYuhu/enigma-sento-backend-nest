@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateWorkgroupRequestDto } from './dto/create-workgroup.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { GroupDistribution, WorkgroupUser } from '@prisma/client';
@@ -61,7 +65,7 @@ export class WorkgroupService {
 
   async findGroupDistributions(workgroupId: string) {
     const groupDistributions = await this.prisma.groupDistribution.findMany({
-      where: { workgroupId },
+      where: { workgroupId, isDeleted: false },
       include: {
         ContentDistribution: {
           distinct: ['projectId'],
@@ -158,13 +162,20 @@ export class WorkgroupService {
     const workgroup = await this.prisma.workgroup.findUnique({
       where: { id: workgroupId },
       include: {
-        DistributionGroup: true,
+        DistributionGroup: { where: { isDeleted: false } },
         WorkgroupUser: {
           where: { User: { role: 'CREATOR' }, isDeleted: false },
         },
       },
     });
     if (!workgroup) throw new NotFoundException('Workgroup not found');
+    if (
+      workgroup.DistributionGroup.length === 0 ||
+      workgroup.WorkgroupUser.length === 0
+    )
+      throw new BadRequestException(
+        'Please add user and group distribution first',
+      );
     const distributed = this.distributeGroupDistribution(
       workgroup.WorkgroupUser,
       workgroup.DistributionGroup,

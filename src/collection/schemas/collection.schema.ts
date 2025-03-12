@@ -10,7 +10,15 @@ export class Collection {
   @Prop({ type: String, enum: Type })
   type: string;
 
-  @Prop({ type: [String] })
+  @Prop({
+    type: [String],
+    validate: {
+      validator: function (value: string[]) {
+        return new Set(value.map((v) => v.toString())).size === value.length;
+      },
+      message: 'Duplicate asset IDs are not allowed.',
+    },
+  })
   assets: string[];
 }
 

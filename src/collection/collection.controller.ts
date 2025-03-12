@@ -22,6 +22,12 @@ export class CollectionController {
     return { message: 'success', data };
   }
 
+  @Post()
+  async createPerson(@Body() createCollectionDto: CreateCollectionDto) {
+    const data = await this.collectionService.createPerson(createCollectionDto);
+    return { message: 'success', data };
+  }
+
   @Get()
   async findAll(@Query('assetType') assetType: CollectionType) {
     const data = await this.collectionService.findAll({ type: assetType });

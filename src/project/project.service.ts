@@ -8,7 +8,7 @@ import { CreateProjectRequestDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { StoryService } from 'src/story/story.service';
-import { shuffle } from 'lodash';
+import { random, shuffle } from 'lodash';
 import { Prisma, Story } from '@prisma/client';
 import { S3Client } from 'bun';
 import { InjectModel } from '@nestjs/mongoose';
@@ -126,7 +126,7 @@ export class ProjectService {
 
     let storyIndex = 0;
     const contentForEachStory: Map<string, number> = new Map();
-    const randomizedStory = shuffle(prismaStory);
+    let randomizedStory = shuffle(prismaStory);
 
     const storyDistribution = await Promise.all(
       WorkgroupUserTask.map(
@@ -140,13 +140,14 @@ export class ProjectService {
                 _,
                 index,
               ): Promise<Prisma.ContentDistributionUncheckedCreateInput> => {
+                randomizedStory = shuffle(randomizedStory);
                 const path = `${code}/${project.name}/${index + 1}`;
 
                 if (project.allocationType === 'GENERIC') {
                   const mappedStory = new Map<string, number>();
                   let storyIndex = 0;
                   let offset = 0;
-                  Array.from({ length: amontOfTroops }).forEach((_, idx) => {
+                  Array.from({ length: amontOfTroops }).forEach(() => {
                     if (mappedStory.has(randomizedStory[storyIndex].id)) {
                       const value = mappedStory.get(
                         randomizedStory[storyIndex].id,

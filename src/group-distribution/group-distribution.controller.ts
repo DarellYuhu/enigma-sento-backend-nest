@@ -54,8 +54,9 @@ export class GroupDistributionController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.groupDistributionService.remove(+id);
+  async remove(@Param('id') id: string) {
+    const data = await this.groupDistributionService.remove(id);
+    return { message: 'success', data };
   }
 
   @Post(':id/download')

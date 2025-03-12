@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UploadedFile,
   UploadedFiles,
   UseInterceptors,
@@ -13,9 +14,10 @@ import { AssetService } from './asset.service';
 import { GetAllMusicResponseDto } from './dto/get-music.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { AddFontRequestDto } from './dto/add-font.dto';
-import { AddImageRequestDto } from './dto/add-image.dto';
+import { AddRepImageRequestDto } from './dto/add-rep-image.dto';
 import { AddVideoRequestDto } from './dto/add-video.dto';
 import { AddBannerRequestDto } from './dto/add-banner.dto';
+import { AddImageRequestDto } from './dto/add-image.dto';
 
 @Controller('assets')
 export class AssetController {
@@ -65,15 +67,27 @@ export class AssetController {
     return { message: 'success' };
   }
 
-  @Post('repurpose/images')
+  @Post('images')
   async addImages(@Body() addImageRequestDto: AddImageRequestDto) {
     const data = await this.assetService.addImages(addImageRequestDto);
     return { message: 'success', data: { created: data } };
   }
 
+  @Get('images')
+  async getImages(@Query('search') search: string) {
+    const data = await this.assetService.getImages({ query: search });
+    return { message: 'success', data };
+  }
+
+  @Post('repurpose/images')
+  async addRepImages(@Body() addRepImageRequestDto: AddRepImageRequestDto) {
+    const data = await this.assetService.addRepImages(addRepImageRequestDto);
+    return { message: 'success', data: { created: data } };
+  }
+
   @Get('repurpose/images')
-  async getImages() {
-    const data = await this.assetService.getImages();
+  async getRepImages() {
+    const data = await this.assetService.getRepImages();
     return { message: 'success', data };
   }
 
