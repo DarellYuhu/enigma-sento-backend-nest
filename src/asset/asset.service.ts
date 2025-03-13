@@ -27,7 +27,6 @@ import { AddBannerRequestDto } from './dto/add-banner.dto';
 import { Banner } from './schemas/banner.schema';
 import { AddImageRequestDto } from './dto/add-image.dto';
 import { Image } from './schemas/image.schema';
-import { QdrantClient } from '@qdrant/js-client-rest';
 import { AiService } from 'src/ai/ai.service';
 import { QdrantService } from 'src/qdrant/qdrant.service';
 

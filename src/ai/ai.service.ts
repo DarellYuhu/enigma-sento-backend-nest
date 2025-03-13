@@ -1,14 +1,23 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class AiService {
-  constructor(private readonly httpService: HttpService) {}
-  o;
+  private readonly TEIUri: string;
+  private readonly CLIPUri: string;
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly config: ConfigService,
+  ) {
+    this.TEIUri = this.config.get<string>('TEI_URI');
+    this.CLIPUri = this.config.get<string>('CLIP_URI');
+  }
+
   async embeddingText(txt: string) {
     const { data } = await firstValueFrom(
-      this.httpService.post<number[][]>('http://localhost:8080/embed', {
+      this.httpService.post<number[][]>(`${this.TEIUri}/embed`, {
         inputs: txt,
       }),
     );
@@ -17,7 +26,7 @@ export class AiService {
 
   async embeddingImage(payload: { uri?: string; text?: string }) {
     const { data } = await firstValueFrom(
-      this.httpService.post<CLIPResponse>('http://localhost:5100/post', {
+      this.httpService.post<CLIPResponse>(`${this.CLIPUri}/post`, {
         data: [payload],
         execEndpoint: '/',
       }),

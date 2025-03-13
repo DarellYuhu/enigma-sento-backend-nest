@@ -8,7 +8,7 @@ import { CreateProjectRequestDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { StoryService } from 'src/story/story.service';
-import { random, shuffle } from 'lodash';
+import { shuffle } from 'lodash';
 import { Prisma, Story } from '@prisma/client';
 import { S3Client } from 'bun';
 import { InjectModel } from '@nestjs/mongoose';
