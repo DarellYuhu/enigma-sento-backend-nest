@@ -144,42 +144,72 @@ export class AssetService {
   }
 
   async addImages(payload: AddImageRequestDto) {
-    const data = await Promise.all(
-      payload.data.map(async ({ name, path, ...item }) => {
-        const _id = new Types.ObjectId();
-        const file = this.minioS3.file(path, { bucket: 'tmp' });
-        const metadata = await this.getImageMetadata(file);
-        const target = `assets/all/images/${name}`;
-        const imgUrl = this.minioS3.presign(path, {
-          method: 'GET',
-          bucket: 'tmp',
-        });
-        const vectors = await Promise.all([
-          this.aiService.embeddingImage({ uri: imgUrl }),
-          this.aiService.embeddingText(item.description),
-          ...item.tags.map((t) => this.aiService.embeddingText(t)),
-        ]);
-        return { _id, name, path: target, vectors, ...metadata, ...item };
-      }),
-    );
-    const [imgVector, ...txtVectors] = data.flatMap((item) =>
+    const data = (
+      await Promise.all(
+        payload.data.map(async ({ name, path, ...item }) => {
+          const _id = new Types.ObjectId();
+          const file = this.minioS3.file(path, { bucket: 'tmp' });
+          const metadata = await this.getImageMetadata(file);
+          const target = `assets/all/images/${name}`;
+          const imgUrl = this.minioS3.presign(path, {
+            endpoint: 'http://minio-dev:9000',
+            method: 'GET',
+            bucket: 'tmp',
+          });
+
+          const vectors = await Promise.all([
+            {
+              type: 'img',
+              value: await this.aiService.embeddingImage({ uri: imgUrl }),
+            },
+            {
+              type: 'txt',
+              value: await this.aiService.embeddingText(item.description),
+            },
+            ...item.tags.map(async (t) => ({
+              type: 'txt',
+              value: await this.aiService.embeddingText(t),
+            })),
+          ]);
+          return { _id, name, path: target, vectors, ...metadata, ...item };
+        }),
+      )
+    ).flatMap((item) =>
       item.vectors.map((vector) => ({ storyId: item._id.toString(), vector })),
     );
+
+    const vectorsMap = new Map<
+      string,
+      { storyId: string; vector: number[] }[]
+    >();
+    data.forEach(({ vector, storyId }) => {
+      if (!vectorsMap.has(vector.type)) vectorsMap.set(vector.type, []);
+      vectorsMap.get(vector.type)!.push({ storyId, vector: vector.value });
+    });
+
     await this.qdrantService.createCollection('image-based', {
       vectors: { size: 512, distance: 'Cosine' },
     });
     await this.qdrantService.createCollection('text-based', {
       vectors: { size: 384, distance: 'Cosine' },
     });
-    await this.qdrantService.insertData({
-      collectionName: 'image-based',
-      points: [imgVector],
-    });
-    await this.qdrantService.insertData({
-      collectionName: 'text-based',
-      points: txtVectors,
-    });
-    const mongoPayload = data.map(({ vectors, ...item }) => item);
+    await Promise.all(
+      Array.from(vectorsMap.entries()).map(async ([type, vectors]) => {
+        switch (type) {
+          case 'img':
+            return this.qdrantService.insertData({
+              collectionName: 'image-based',
+              points: vectors,
+            });
+          case 'txt':
+            return this.qdrantService.insertData({
+              collectionName: 'text-based',
+              points: vectors,
+            });
+        }
+      }),
+    );
+    const mongoPayload = data.map(({ vector: _, ...item }) => item);
     const result = await this.image.insertMany(mongoPayload);
     await Promise.all(
       payload.data.map(async ({ path, name }) => {

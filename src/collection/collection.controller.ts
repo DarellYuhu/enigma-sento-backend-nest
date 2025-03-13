@@ -22,9 +22,15 @@ export class CollectionController {
     return { message: 'success', data };
   }
 
-  @Post()
-  async createPerson(@Body() createCollectionDto: CreateCollectionDto) {
-    const data = await this.collectionService.createPerson(createCollectionDto);
+  @Post('peoples')
+  async createPeople(@Body() createCollectionDto: CreateCollectionDto) {
+    const data = await this.collectionService.createPeople(createCollectionDto);
+    return { message: 'success', data };
+  }
+
+  @Get('peoples')
+  async findPeople() {
+    const data = await this.collectionService.findPeople();
     return { message: 'success', data };
   }
 

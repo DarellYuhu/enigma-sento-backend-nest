@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Collection } from './schemas/collection.schema';
 import { Model } from 'mongoose';
-import { CreatePersonDto } from './dto/create-person.dto';
 import { People } from './schemas/people.schema';
+import { CreatePeopleDto } from './dto/create-people.dto';
 
 @Injectable()
 export class CollectionService {
@@ -22,8 +22,19 @@ export class CollectionService {
     return this.collection.find({ type: query.type }).lean();
   }
 
-  createPerson(createPersonDto: CreatePersonDto) {
-    this.people.create(createPersonDto);
+  async createPeople(createPeopleDto: CreatePeopleDto) {
+    try {
+      return await this.people.create(createPeopleDto);
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new ConflictException('People with the same name already exist!');
+      }
+      throw error;
+    }
+  }
+
+  findPeople() {
+    return this.people.find().lean();
   }
 
   findOne(id: number) {
