@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { GeoJson, GeoJsonSchema } from './geoJson.schema';
 
-@Schema()
+@Schema({ _id: false })
 export class Location {
   @Prop()
   name: string;
@@ -28,6 +28,7 @@ export class Image {
   @Prop({ type: [String], default: [] })
   tags: string[];
   @Prop({
+    ref: 'People',
     type: [String],
     validate: {
       validator: function (value: string[]) {

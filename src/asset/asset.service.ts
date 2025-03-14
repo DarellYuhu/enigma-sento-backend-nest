@@ -29,6 +29,7 @@ import { AddImageRequestDto } from './dto/add-image.dto';
 import { Image } from './schemas/image.schema';
 import { AiService } from 'src/ai/ai.service';
 import { QdrantService } from 'src/qdrant/qdrant.service';
+import { People } from 'src/collection/schemas/people.schema';
 
 @Injectable()
 export class AssetService {
@@ -130,53 +131,61 @@ export class AssetService {
       ]);
       const result = await Promise.all([
         this.qdrantService.query('text-based', text, 0.7),
-        this.qdrantService.query('image-based', img, 0.2),
+        this.qdrantService.query('image-based', img, 0.15),
       ]);
       ids = result.flat();
       filter = { _id: { $in: ids } };
     }
-    const data = (await this.image.find(filter).lean()).map((item) => ({
-      ...item,
-      url: this.minioS3.presign(item.path, { method: 'GET' }),
-    }));
+    const data = (
+      await this.image
+        .find(filter)
+        .sort([['createdAt', 'desc']])
+        .limit(50)
+        .populate('people')
+        .lean()
+    ).map((item) => {
+      return {
+        ...item,
+        people: item.people as unknown as People[],
+        url: this.minioS3.presign(item.path, { method: 'GET' }),
+      };
+    });
     return data;
   }
 
   async addImages(payload: AddImageRequestDto) {
-    const data = (
-      await Promise.all(
-        payload.data.map(async ({ name, path, ...item }) => {
-          const _id = new Types.ObjectId();
-          const file = this.minioS3.file(path, { bucket: 'tmp' });
-          const metadata = await this.getImageMetadata(file);
-          const target = `assets/all/images/${name}`;
-          const imgUrl = this.minioS3.presign(path, {
-            endpoint: 'http://minio-dev:9000',
-            method: 'GET',
-            bucket: 'tmp',
-          });
+    const normalized = await Promise.all(
+      payload.data.map(async ({ name, path, ...item }) => {
+        const _id = new Types.ObjectId();
+        const file = this.minioS3.file(path, { bucket: 'tmp' });
+        const metadata = await this.getImageMetadata(file);
+        const target = `assets/all/images/${name}`;
+        const imgUrl = this.minioS3.presign(path, {
+          endpoint: 'http://minio-dev:9000',
+          method: 'GET',
+          bucket: 'tmp',
+        });
 
-          const vectors = await Promise.all([
-            {
-              type: 'img',
-              value: await this.aiService.embeddingImage({ uri: imgUrl }),
-            },
-            {
-              type: 'txt',
-              value: await this.aiService.embeddingText(item.description),
-            },
-            ...item.tags.map(async (t) => ({
-              type: 'txt',
-              value: await this.aiService.embeddingText(t),
-            })),
-          ]);
-          return { _id, name, path: target, vectors, ...metadata, ...item };
-        }),
-      )
-    ).flatMap((item) =>
+        const vectors = await Promise.all([
+          {
+            type: 'img',
+            value: await this.aiService.embeddingImage({ uri: imgUrl }),
+          },
+          {
+            type: 'txt',
+            value: await this.aiService.embeddingText(item.description),
+          },
+          ...item.tags.map(async (t) => ({
+            type: 'txt',
+            value: await this.aiService.embeddingText(t),
+          })),
+        ]);
+        return { _id, name, path: target, vectors, ...metadata, ...item };
+      }),
+    );
+    const data = normalized.flatMap((item) =>
       item.vectors.map((vector) => ({ storyId: item._id.toString(), vector })),
     );
-
     const vectorsMap = new Map<
       string,
       { storyId: string; vector: number[] }[]
@@ -208,7 +217,7 @@ export class AssetService {
         }
       }),
     );
-    const mongoPayload = data.map(({ vector: _, ...item }) => item);
+    const mongoPayload = normalized.map(({ vectors: _, ...item }) => item);
     const result = await this.image.insertMany(mongoPayload);
     await Promise.all(
       payload.data.map(async ({ path, name }) => {

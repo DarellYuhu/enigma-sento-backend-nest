@@ -36,6 +36,26 @@ export class QdrantService {
       group_by: 'id',
       query,
     });
+    // console.log('huhi');
+    if (collectionName === 'image-based') {
+      const map = groups.map((item) => ({
+        id: item.id,
+        score: item.hits[0].score * 99.99998140119261,
+      }));
+      const maxScore = Math.max(...map.map((item) => item.score));
+      const nextScore = map.map((item) => ({
+        ...item,
+        score: Math.exp(item.score) - maxScore,
+      }));
+      const sumNextScore = nextScore.reduce((acc, item) => acc + item.score, 0);
+      const finalScore = nextScore.map((item) => ({
+        ...item,
+        score: item.score / sumNextScore,
+      }));
+      return finalScore
+        .filter((item) => item.score > 0.35)
+        .map((item) => item.id as string);
+    }
     return groups.map((item) => item.id as string);
   }
 }

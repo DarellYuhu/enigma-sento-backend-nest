@@ -18,6 +18,7 @@ import { AddRepImageRequestDto } from './dto/add-rep-image.dto';
 import { AddVideoRequestDto } from './dto/add-video.dto';
 import { AddBannerRequestDto } from './dto/add-banner.dto';
 import { AddImageRequestDto } from './dto/add-image.dto';
+import { GetImagesDto } from './dto/get-images.dto';
 
 @Controller('assets')
 export class AssetController {
@@ -74,7 +75,7 @@ export class AssetController {
   }
 
   @Get('images')
-  async getImages(@Query('search') search: string) {
+  async getImages(@Query('search') search: string): Promise<GetImagesDto> {
     const data = await this.assetService.getImages({ query: search });
     return { message: 'success', data };
   }

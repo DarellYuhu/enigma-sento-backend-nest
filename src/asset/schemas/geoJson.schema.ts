@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
-@Schema()
+@Schema({ _id: false })
 export class GeoJson {
   @Prop({ type: String, enum: ['Point'], default: 'Point' })
   type: string;
