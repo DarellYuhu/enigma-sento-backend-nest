@@ -161,7 +161,7 @@ export class AssetService {
         const metadata = await this.getImageMetadata(file);
         const target = `assets/all/images/${name}`;
         const imgUrl = this.minioS3.presign(path, {
-          endpoint: 'http://minio-dev:9000',
+          endpoint: this.config.get('MINIO_URI'),
           method: 'GET',
           bucket: 'tmp',
         });

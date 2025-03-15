@@ -5,8 +5,8 @@ import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class AiService {
-  private readonly TEIUri: string;
-  private readonly CLIPUri: string;
+  private TEIUri: string;
+  private CLIPUri: string;
   constructor(
     private readonly httpService: HttpService,
     private readonly config: ConfigService,
