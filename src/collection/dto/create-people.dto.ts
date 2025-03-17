@@ -1,7 +1,7 @@
-class Data {
+export class CreatePeopleData {
   name: string;
 }
 
 export class CreatePeopleDto {
-  data: Data[];
+  data: CreatePeopleData[];
 }

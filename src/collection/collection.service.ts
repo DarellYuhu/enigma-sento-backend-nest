@@ -3,7 +3,7 @@ import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Collection } from './schemas/collection.schema';
-import { Model } from 'mongoose';
+import { Model, UpdateQuery } from 'mongoose';
 import { People } from './schemas/people.schema';
 import { CreatePeopleDto } from './dto/create-people.dto';
 
@@ -41,8 +41,18 @@ export class CollectionService {
     return `This action returns a #${id} collection`;
   }
 
-  update(id: number, updateCollectionDto: UpdateCollectionDto) {
-    return `This action updates a #${id} collection`;
+  update(id: string, updateCollectionDto: UpdateCollectionDto) {
+    const { newAssets, deletedAssets, ...payload } = updateCollectionDto;
+    const updateQuery: UpdateQuery<People> = { ...payload };
+    if (deletedAssets?.length > 0) {
+      updateQuery.$pull = { assets: { $in: deletedAssets } };
+    }
+    if (newAssets?.length > 0) {
+      updateQuery.$addToSet = { assets: { $each: newAssets } };
+    }
+    return this.collection
+      .findOneAndUpdate({ _id: id }, updateQuery, { new: true })
+      .lean();
   }
 
   remove(id: number) {

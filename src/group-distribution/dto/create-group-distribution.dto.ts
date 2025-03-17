@@ -7,7 +7,7 @@ export class CreateGroupDistributionDto {
   file: Express.Multer.File;
 }
 
-class GS extends PartialType(GroupDistribution) {
+export class GS extends PartialType(GroupDistribution) {
   @IsNumber()
   amontOfTroops: number;
 

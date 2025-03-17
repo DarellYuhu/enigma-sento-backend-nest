@@ -47,11 +47,12 @@ export class CollectionController {
   }
 
   @Patch(':id')
-  update(
+  async update(
     @Param('id') id: string,
     @Body() updateCollectionDto: UpdateCollectionDto,
   ) {
-    return this.collectionService.update(+id, updateCollectionDto);
+    const data = await this.collectionService.update(id, updateCollectionDto);
+    return { message: 'ok', data };
   }
 
   @Delete(':id')

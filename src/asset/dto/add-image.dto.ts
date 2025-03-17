@@ -1,6 +1,6 @@
 import { Location } from '../schemas/image.schema';
 
-class Image {
+export class ImageData {
   name: string;
   path: string;
   description: string;
@@ -10,5 +10,5 @@ class Image {
 }
 
 export class AddImageRequestDto {
-  data: Image[];
+  data: ImageData[];
 }

@@ -1,21 +1,21 @@
 import { StoryType } from '@prisma/client';
 
-class Image {
+export class ImageData {
   path: string;
   name: string;
 }
 
-class Section {
+export class SectionData {
   texts: string[];
   textColor: string;
   textBgColor: string;
   textStroke: string;
   textPosition: 'random' | 'middle' | 'bottom';
-  images: Image[];
+  images: ImageData[];
 }
 
 export class CreateStoryDto {
-  data: Section[];
+  data: SectionData[];
   type: StoryType[];
   projectId: string;
   section: number;

@@ -16,6 +16,7 @@ type Section = {
 };
 
 type CollectionType =
+  | 'IMAGE'
   | 'MUSIC'
   | 'COLOR'
   | 'FONT'

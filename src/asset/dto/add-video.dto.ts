@@ -1,8 +1,8 @@
-class Video {
+export class VideoData {
   name: string;
   path: string;
 }
 
 export class AddVideoRequestDto {
-  data: Video[];
+  data: VideoData[];
 }
