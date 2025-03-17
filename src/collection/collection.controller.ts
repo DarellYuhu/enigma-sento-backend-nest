@@ -11,6 +11,7 @@ import {
 import { CollectionService } from './collection.service';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
+import { CreatePeopleDto } from './dto/create-people.dto';
 
 @Controller('collections')
 export class CollectionController {
@@ -23,8 +24,8 @@ export class CollectionController {
   }
 
   @Post('peoples')
-  async createPeople(@Body() createCollectionDto: CreateCollectionDto) {
-    const data = await this.collectionService.createPeople(createCollectionDto);
+  async createPeople(@Body() createPeopleDto: CreatePeopleDto) {
+    const data = await this.collectionService.createPeople(createPeopleDto);
     return { message: 'success', data };
   }
 

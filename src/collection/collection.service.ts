@@ -24,7 +24,7 @@ export class CollectionService {
 
   async createPeople(createPeopleDto: CreatePeopleDto) {
     try {
-      return await this.people.create(createPeopleDto);
+      return await this.people.insertMany(createPeopleDto.data);
     } catch (error) {
       if (error.code === 11000) {
         throw new ConflictException('People with the same name already exist!');
