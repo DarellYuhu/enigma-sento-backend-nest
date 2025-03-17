@@ -8,7 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { S3Client, S3File } from 'bun';
 import { parseBuffer } from 'music-metadata';
 import { Music } from './schemas/music.schema';
-import { Model, Types } from 'mongoose';
+import { Model, RootFilterQuery, Types } from 'mongoose';
 import { Font } from './schemas/font.schema';
 import { Color } from './schemas/color.schema';
 import { ConfigService } from '@nestjs/config';
@@ -30,6 +30,7 @@ import { Image } from './schemas/image.schema';
 import { AiService } from 'src/ai/ai.service';
 import { QdrantService } from 'src/qdrant/qdrant.service';
 import { People } from 'src/collection/schemas/people.schema';
+import { CollectionService } from 'src/collection/collection.service';
 
 @Injectable()
 export class AssetService {
@@ -42,6 +43,7 @@ export class AssetService {
     @InjectModel(Image.name) private image: Model<Image>,
     @InjectModel(Video.name) private video: Model<Video>,
     @InjectModel(Banner.name) private banner: Model<Banner>,
+    private readonly collectionService: CollectionService,
     private readonly qdrantService: QdrantService,
     private readonly aiService: AiService,
     private readonly config: ConfigService,
@@ -121,9 +123,10 @@ export class AssetService {
     return this.color.find({}).lean();
   }
 
-  async getImages(payload: { query: string }) {
+  async getImages(payload: { query: string; collectionId: string }) {
     let ids: string[] = [];
-    let filter = {};
+    let filter: RootFilterQuery<Image> = {};
+
     if (payload.query) {
       const [text, img] = await Promise.all([
         this.aiService.embeddingText(payload.query),
@@ -136,6 +139,20 @@ export class AssetService {
       ids = result.flat();
       filter = { _id: { $in: ids } };
     }
+
+    if (payload.collectionId) {
+      const collection = await this.collectionService.findOne(
+        payload.collectionId,
+      );
+      if (ids.length > 0) {
+        filter._id = {
+          $in: ids.filter((id) => collection.assets.includes(id)),
+        };
+      } else {
+        filter._id = { $in: collection.assets };
+      }
+    }
+
     const data = (
       await this.image
         .find(filter)

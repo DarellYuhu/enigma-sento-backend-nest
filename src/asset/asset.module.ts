@@ -12,9 +12,11 @@ import { RepImage, RepImageSchema } from './schemas/rep-image.schema';
 import { Image, ImageSchema } from './schemas/image.schema';
 import { QdrantModule } from 'src/qdrant/qdrant.module';
 import { AiModule } from 'src/ai/ai.module';
+import { CollectionModule } from 'src/collection/collection.module';
 
 @Module({
   imports: [
+    CollectionModule,
     AiModule,
     QdrantModule,
     MinioS3Module,

@@ -14,5 +14,6 @@ import { People, PeopleSchema } from './schemas/people.schema';
   ],
   controllers: [CollectionController],
   providers: [CollectionService],
+  exports: [CollectionService],
 })
 export class CollectionModule {}

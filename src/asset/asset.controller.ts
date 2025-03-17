@@ -75,8 +75,14 @@ export class AssetController {
   }
 
   @Get('images')
-  async getImages(@Query('search') search: string): Promise<GetImagesDto> {
-    const data = await this.assetService.getImages({ query: search });
+  async getImages(
+    @Query('search') search: string,
+    @Query('collectionId') collectionId: string,
+  ): Promise<GetImagesDto> {
+    const data = await this.assetService.getImages({
+      query: search,
+      collectionId,
+    });
     return { message: 'success', data };
   }
 

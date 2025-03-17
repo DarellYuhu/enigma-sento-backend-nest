@@ -37,8 +37,8 @@ export class CollectionService {
     return this.people.find().lean();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} collection`;
+  findOne(id: string) {
+    return this.collection.findOne({ _id: id }).lean();
   }
 
   update(id: string, updateCollectionDto: UpdateCollectionDto) {
