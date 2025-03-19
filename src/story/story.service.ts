@@ -41,6 +41,9 @@ export class StoryService {
           data.map(async (item) => {
             const images = await Promise.all(
               item.images.map(async (path) => {
+                if (item.imageType === 'Collection') {
+                  return path;
+                }
                 const newPath = `stories/${id}/${path.name}`;
                 await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} mv myminio/tmp/${path.path} myminio/assets/${newPath}`;
                 return { path: newPath, name: path.name };

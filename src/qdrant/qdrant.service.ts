@@ -53,7 +53,7 @@ export class QdrantService {
         score: item.score / sumNextScore,
       }));
       return finalScore
-        .filter((item) => item.score > 0.35)
+        .filter((item) => item.score > 0.05)
         .map((item) => item.id as string);
     }
     return groups.map((item) => item.id as string);

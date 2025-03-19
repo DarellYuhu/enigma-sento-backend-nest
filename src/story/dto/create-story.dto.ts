@@ -10,6 +10,7 @@ export class SectionData {
   textColor: string;
   textBgColor: string;
   textStroke: string;
+  imageType: 'Collection' | 'Upload';
   textPosition: 'random' | 'middle' | 'bottom';
   images: ImageData[];
 }
