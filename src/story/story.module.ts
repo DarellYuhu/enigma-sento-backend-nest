@@ -3,8 +3,8 @@ import { StoryService } from './story.service';
 import { StoryController } from './story.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Story, StorySchema } from './schemas/story.schema';
-import { MinioS3Module } from 'src/minio-s3/minio-s3.module';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { MinioS3Module } from 'src/core/minio-s3/minio-s3.module';
+import { PrismaService } from 'src/core/prisma/prisma.service';
 import { AssetModule } from 'src/asset/asset.module';
 import { BullModule } from '@nestjs/bullmq';
 

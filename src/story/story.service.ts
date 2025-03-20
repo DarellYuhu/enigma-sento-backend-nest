@@ -9,7 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { Story } from './schemas/story.schema';
 import { S3Client } from 'bun';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/core/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { UpdateSectionRequestDto } from './dto/updateSection-story.dto';
 import { random } from 'lodash';

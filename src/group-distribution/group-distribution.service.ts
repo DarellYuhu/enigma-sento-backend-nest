@@ -10,7 +10,7 @@ import {
 } from './dto/create-group-distribution.dto';
 import { UpdateGroupDistributionDto } from './dto/update-group-distribution.dto';
 import * as xlsx from 'xlsx';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/core/prisma/prisma.service';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { ConfigService } from '@nestjs/config';

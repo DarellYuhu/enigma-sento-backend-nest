@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { CreateProjectRequestDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/core/prisma/prisma.service';
 import { StoryService } from 'src/story/story.service';
 import { shuffle } from 'lodash';
 import { Prisma, Story } from '@prisma/client';

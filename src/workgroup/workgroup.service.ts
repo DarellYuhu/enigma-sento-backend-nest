@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateWorkgroupRequestDto } from './dto/create-workgroup.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/core/prisma/prisma.service';
 import { GroupDistribution, WorkgroupUser } from '@prisma/client';
 import { shuffle } from 'lodash';
 

@@ -14,15 +14,18 @@ datasource db {
 }
 
 model User {
-  id            String          @id @default(uuid())
-  username      String          @unique
-  password      String
-  displayName   String
-  role          Role
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  WorkgroupUser WorkgroupUser[]
-  Workgroup     Workgroup[]
+  id               String          @id @default(uuid())
+  username         String          @unique
+  password         String
+  displayName      String
+  role             Role
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  WorkgroupUser    WorkgroupUser[]
+  Workgroup        Workgroup[]
+  AuthoredProposal Proposal[]      @relation("Author")
+  ApprovedProposal Proposal[]      @relation("Approver")
+  Feedback         Feedback[]
 }
 
 model Workgroup {
@@ -31,6 +34,7 @@ model Workgroup {
   session             Int
   projectStoryPerUser Int
   managerId           String
+  withTicket          Boolean               @default(false)
   Manager             User                  @relation(fields: [managerId], references: [id])
   DistributionGroup   GroupDistribution[]
   WorkgroupUser       WorkgroupUser[]
@@ -100,8 +104,9 @@ model Project {
   hashtags            String?
   ContentDistribution ContentDistribution[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  Proposal  Proposal?
 
   @@unique([name, workgroupUserId])
 }
@@ -142,6 +147,51 @@ model ContentDistribution {
   @@unique([workgroupId, groupDistributionCode, session, projectId, storyId], name: "uniqueConstraint")
 }
 
+model Proposal {
+  id              String         @id @default(uuid())
+  title           String
+  status          ProposalStatus @default(WAITING)
+  Author          User           @relation("Author", fields: [authorId], references: [id])
+  authorId        String
+  Approver        User?          @relation("Approver", fields: [approverId], references: [id])
+  approverId      String?
+  projectId       String?        @unique
+  Project         Project?       @relation(fields: [projectId], references: [id])
+  submissionId    Int?           @unique
+  FinalSubmission Submission?    @relation(name: "finalSubmission", fields: [submissionId], references: [id])
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  approvedAt DateTime?
+  Submission Submission[] @relation("Submission")
+  Feedback   Feedback[]
+}
+
+model Submission {
+  id              Int            @id @default(autoincrement())
+  filePath        String
+  status          ProposalStatus @default(WAITING)
+  proposalId      String
+  Proposal        Proposal       @relation("Submission", fields: [proposalId], references: [id])
+  FinalSubmission Proposal?      @relation("finalSubmission")
+  Feedback        Feedback[]
+}
+
+model Feedback {
+  id           Int        @id @default(autoincrement())
+  message      String
+  filePath     String?
+  proposalId   String
+  Proposal     Proposal   @relation(fields: [proposalId], references: [id])
+  submissionId Int
+  Submission   Submission @relation(fields: [submissionId], references: [id])
+  userId       String
+  User         User       @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum Role {
   MANAGER
   CREATOR
@@ -153,6 +203,13 @@ enum GeneratorStatus {
   RUNNING
   FINISHED
   ERROR
+}
+
+enum ProposalStatus {
+  WAITING
+  ACCEPTED
+  REJECTED
+  REVISIED
 }
 
 enum StoryType {

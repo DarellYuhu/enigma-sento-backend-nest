@@ -4,7 +4,7 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { WorkgroupModule } from './workgroup/workgroup.module';
-import { LoggerMiddleware } from './logger/logger.middleware';
+import { LoggerMiddleware } from './core/logger/logger.middleware';
 import { GroupDistributionModule } from './group-distribution/group-distribution.module';
 import { CollectionModule } from './collection/collection.module';
 import { ProjectModule } from './project/project.module';
@@ -15,8 +15,9 @@ import { AssetModule } from './asset/asset.module';
 import { ContentGeneratorModule } from './content-generator/content-generator.module';
 import { BullModule } from '@nestjs/bullmq';
 import { TaskModule } from './task/task.module';
-import { AiModule } from './ai/ai.module';
-import { QdrantModule } from './qdrant/qdrant.module';
+import { AiModule } from './core/ai/ai.module';
+import { QdrantModule } from './core/qdrant/qdrant.module';
+import { ProposalModule } from './proposal/proposal.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { QdrantModule } from './qdrant/qdrant.module';
     }),
     AiModule,
     QdrantModule,
+    ProposalModule,
   ],
   controllers: [AppController],
   providers: [Logger],
