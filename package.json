@@ -25,7 +25,8 @@
     "up:dev": "docker compose -f compose.dev.yaml up -d",
     "down:dev": "docker compose -f compose.dev.yaml down",
     "db:pull": "bunx prisma db pull",
-    "db:migrate": "bunx prisma migrate dev"
+    "db:migrate": "bunx prisma migrate dev",
+    "db:deploy": "bunx prisma migrate deploy"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.0",

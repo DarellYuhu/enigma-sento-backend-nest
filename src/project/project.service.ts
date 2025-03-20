@@ -56,6 +56,14 @@ export class ProjectService {
     const projects = await this.prisma.project.findMany({
       where: { workgroupId, WorkgroupUser: { userId } },
       include: { Story: { orderBy: { id: 'asc' } } },
+      orderBy: [
+        {
+          createdAt: 'desc',
+        },
+        {
+          name: 'asc',
+        },
+      ],
     });
     if (!projects) throw new NotFoundException('Projects not found');
 

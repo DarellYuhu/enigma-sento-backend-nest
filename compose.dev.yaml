@@ -33,7 +33,7 @@ services:
     volumes:
       - tei-dev-data:/data
     ports:
-      - 8080:80
+      - 9090:80
     command: ['--model-id=sentence-transformers/all-MiniLM-L6-v2']
 
   vector-db-dev:
@@ -67,8 +67,8 @@ services:
       - yuhu
     image: minio/minio:latest
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - '9002:9000'
+      - '9003:9001'
     env_file:
       - .env.docker
     volumes:
