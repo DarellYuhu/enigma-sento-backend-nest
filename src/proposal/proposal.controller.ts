@@ -1,20 +1,42 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { ProposalService } from './proposal.service';
 import { CreateProposalDto } from './dto/create-proposal.dto';
 import { UpdateProposalDto } from './dto/update-proposal.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { Role } from '@prisma/client';
+import { UpdateProposalStatusDto } from './dto/updateStatus-proposal.dto';
+import { CreateSubmissionDto } from './dto/create-submission.dto';
 
-@Controller('proposal')
+@UseGuards(AuthGuard)
+@Controller('proposals')
 export class ProposalController {
   constructor(private readonly proposalService: ProposalService) {}
 
   @Post()
-  create(@Body() createProposalDto: CreateProposalDto) {
-    return this.proposalService.create(createProposalDto);
+  async create(@Body() createProposalDto: CreateProposalDto, @Req() req) {
+    const user: JwtPayload = req.user;
+    const data = await this.proposalService.create(user.sub, createProposalDto);
+    return { message: 'success', data };
   }
 
   @Get()
-  findAll() {
-    return this.proposalService.findAll();
+  async findAll(@Req() req) {
+    const user: JwtPayload = req.user;
+    const data = await this.proposalService.findAll(
+      user.sub,
+      user.role as Role,
+    );
+    return { message: 'success', data };
   }
 
   @Get(':id')
@@ -23,8 +45,40 @@ export class ProposalController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProposalDto: UpdateProposalDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateProposalDto: UpdateProposalDto,
+  ) {
     return this.proposalService.update(+id, updateProposalDto);
+  }
+
+  @Post(':id/submissions')
+  async createSubmission(
+    @Param('id') id: string,
+    @Body() createSubmissionDto: CreateSubmissionDto,
+  ) {
+    const data = await this.proposalService.createSubmission(
+      id,
+      createSubmissionDto,
+    );
+    return { message: 'success', data };
+  }
+
+  @Patch(':id/submission/:submissionId/status')
+  async updateProposalStatus(
+    @Body() updateProposalStatusDto: UpdateProposalStatusDto,
+    @Param('id') proposalId: string,
+    @Param('submissionId') submissionId: string,
+    @Req() req,
+  ) {
+    const user: JwtPayload = req.user;
+    const data = await this.proposalService.updateProposalStatus(
+      proposalId,
+      +submissionId,
+      user.sub,
+      updateProposalStatusDto,
+    );
+    return { message: 'success', data };
   }
 
   @Delete(':id')

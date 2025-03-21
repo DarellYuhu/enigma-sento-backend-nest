@@ -8,4 +8,5 @@ export class Workgroup implements PrismaWorkgroup {
   projectStoryPerUser: number;
   session: number;
   updatedAt: Date;
+  withTicket: boolean;
 }

@@ -5,6 +5,7 @@ const generator = new PluginMetadataGenerator();
 generator.generate({
   visitors: [
     new ReadonlyVisitor({
+      classValidatorShim: true,
       introspectComments: true,
       pathToSource: __dirname,
     }),

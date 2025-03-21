@@ -10,6 +10,13 @@ export class LoggerMiddleware implements NestMiddleware {
 
     res.on('close', () => {
       const { statusCode } = res;
+      if (statusCode === 500) {
+        this.logger.log({
+          body: req.body,
+          query: req.query,
+          params: req.params,
+        });
+      }
       this.logger.log(`${method} ${url} ${statusCode} - ${ip}`);
     });
 

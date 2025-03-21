@@ -12,7 +12,7 @@ import {
 import { GroupDistributionService } from './group-distribution.service';
 import { UpdateGroupDistributionDto } from './dto/update-group-distribution.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { CreateGroupDistributionDto } from './dto/create-group-distribution.dto';
 import { DownloadGroupDistributionDto } from './dto/download-group-distribution.dto';
 
@@ -23,6 +23,7 @@ export class GroupDistributionController {
   ) {}
 
   @Post()
+  @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateGroupDistributionDto })
   @UseInterceptors(FileInterceptor('file'))
   create(
@@ -43,6 +44,9 @@ export class GroupDistributionController {
   }
 
   @Patch(':id')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UpdateGroupDistributionDto })
+  @UseInterceptors(FileInterceptor('file'))
   update(
     @Param('id') id: string,
     @Body() updateGroupDistributionDto: UpdateGroupDistributionDto,

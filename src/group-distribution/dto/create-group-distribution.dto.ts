@@ -1,9 +1,18 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { GroupDistribution } from '../entities/group-distribution.entity';
-import { IsArray, IsNumber, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateGroupDistributionDto {
+  @IsNotEmpty()
+  @ApiProperty({ type: 'string', format: 'binary' })
   file: Express.Multer.File;
 }
 

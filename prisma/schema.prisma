@@ -164,25 +164,27 @@ model Proposal {
   updatedAt  DateTime     @updatedAt
   approvedAt DateTime?
   Submission Submission[] @relation("Submission")
-  Feedback   Feedback[]
 }
 
 model Submission {
   id              Int            @id @default(autoincrement())
+  fileName        String
   filePath        String
   status          ProposalStatus @default(WAITING)
   proposalId      String
   Proposal        Proposal       @relation("Submission", fields: [proposalId], references: [id])
   FinalSubmission Proposal?      @relation("finalSubmission")
   Feedback        Feedback[]
+
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
 }
 
 model Feedback {
   id           Int        @id @default(autoincrement())
   message      String
+  fileName     String?
   filePath     String?
-  proposalId   String
-  Proposal     Proposal   @relation(fields: [proposalId], references: [id])
   submissionId Int
   Submission   Submission @relation(fields: [submissionId], references: [id])
   userId       String

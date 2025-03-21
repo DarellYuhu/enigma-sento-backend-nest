@@ -9,4 +9,6 @@ export class Project implements PrismaProject {
   status: boolean;
   workgroupId: string;
   workgroupUserId: number;
+  createdAt: Date;
+  updatedAt: Date;
 }

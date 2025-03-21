@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import metadata from './metadata';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   await Bun.$`pwd`;
@@ -20,6 +21,7 @@ async function bootstrap() {
     })
     .build();
 
+  app.useGlobalPipes(new ValidationPipe());
   app.enableCors({
     origin: envConfig.get('ALLOWED_ORIGINS').split(','),
     exposedHeaders: ['Content-Disposition'],

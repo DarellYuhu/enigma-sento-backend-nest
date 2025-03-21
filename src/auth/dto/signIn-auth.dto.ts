@@ -1,7 +1,13 @@
 import { Role } from '@prisma/client';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class SignInAuthRequestDto {
+  @IsNotEmpty()
+  @IsString()
   username: string;
+
+  @IsString()
+  @IsNotEmpty()
   password: string;
 }
 
