@@ -1,6 +1,6 @@
 import {
-  ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,13 +8,15 @@ import { CreateProposalDto } from './dto/create-proposal.dto';
 import { UpdateProposalDto } from './dto/update-proposal.dto';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, ProposalStatus, Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import { UpdateProposalStatusDto } from './dto/updateStatus-proposal.dto';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
+import { S3Client } from 'bun';
 
 @Injectable()
 export class ProposalService {
   constructor(
+    @Inject('S3_CLIENT') private minioS3: S3Client,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {}
@@ -131,8 +133,45 @@ export class ProposalService {
     });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} proposal`;
+  async findOne(id: string) {
+    const proposal = await this.prisma.proposal.findUniqueOrThrow({
+      where: { id },
+      include: {
+        Submission: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          include: {
+            Feedback: {
+              include: { User: { select: { id: true, displayName: true } } },
+            },
+          },
+        },
+        Author: { select: { id: true, displayName: true } },
+        Approver: { select: { id: true, displayName: true } },
+      },
+    });
+    return {
+      ...proposal,
+      Feedback: proposal.Submission.map((sub) =>
+        sub.Feedback.map((item) => ({
+          ...item,
+          uri: item.filePath
+            ? this.minioS3.presign(item.filePath, {
+                method: 'GET',
+                bucket: 'assets',
+              })
+            : undefined,
+        })),
+      ).flat(),
+      Submission: proposal.Submission.map((submission) => ({
+        ...submission,
+        uri: this.minioS3.presign(submission.filePath, {
+          method: 'GET',
+          bucket: 'assets',
+        }),
+      })),
+    };
   }
 
   update(id: number, updateProposalDto: UpdateProposalDto) {

@@ -40,8 +40,9 @@ export class ProposalController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.proposalService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    const data = await this.proposalService.findOne(id);
+    return { message: 'success', data };
   }
 
   @Patch(':id')
