@@ -22,10 +22,11 @@ export class ProposalService {
   ) {}
 
   async create(authorId: string, createProposalDto: CreateProposalDto) {
-    const { title, fileName, filePath } = createProposalDto;
+    const { title, fileName, filePath, workgroupId } = createProposalDto;
     await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} mv myminio/tmp/${filePath} myminio/assets/${filePath}`;
     return this.prisma.proposal.create({
       data: {
+        workgroupId,
         authorId,
         title: title,
         Submission: {
@@ -38,9 +39,13 @@ export class ProposalService {
     });
   }
 
-  findAll(authorId: string, role?: Role) {
+  findAll(authorId: string, role?: Role, available?: boolean) {
     let query: Prisma.ProposalWhereInput = { authorId };
     if (role === 'MANAGER') query = {};
+    if (available) {
+      query.status = 'ACCEPTED';
+      query.projectId = null;
+    }
     return this.prisma.proposal.findMany({
       where: query,
       include: {

@@ -23,12 +23,15 @@ import {
   AddUsersResponseDto,
 } from './dto/addUsers-workgroup.dto';
 import { GenerateUserTasksResponseDto } from './dto/generateUserTasks-workgroup.dto';
+import { RolesGuard } from 'src/core/roles/roles.guard';
+import { Roles } from 'src/core/roles/roles.decorator';
 
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Controller('workgroups')
 export class WorkgroupController {
   constructor(private readonly workgroupService: WorkgroupService) {}
 
+  @Roles('MANAGER')
   @Post()
   async create(
     @Req() req,
@@ -46,6 +49,12 @@ export class WorkgroupController {
   async findAll(@Req() req): Promise<FindAllWorkgroupResponseDto> {
     const user: JwtPayload = req.user;
     const data = await this.workgroupService.findAll(user.sub);
+    return { message: 'success', data };
+  }
+
+  @Get(':id')
+  async findById(@Param('id') id: string) {
+    const data = await this.workgroupService.findById(id);
     return { message: 'success', data };
   }
 

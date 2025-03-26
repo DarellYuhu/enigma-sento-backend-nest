@@ -27,6 +27,10 @@ export class WorkgroupService {
     });
   }
 
+  findById(id: string) {
+    return this.prisma.workgroup.findUnique({ where: { id } });
+  }
+
   async findUsers(workgroupId: string) {
     const workgroups = await this.prisma.workgroupUser.findMany({
       where: { workgroupId, isDeleted: false },

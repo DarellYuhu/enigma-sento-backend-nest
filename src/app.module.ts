@@ -32,6 +32,9 @@ import { ProposalModule } from './proposal/proposal.module';
     AssetModule,
     ContentGeneratorModule,
     TaskModule,
+    AiModule,
+    QdrantModule,
+    ProposalModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -54,9 +57,6 @@ import { ProposalModule } from './proposal/proposal.module';
         dbName: 'enigma-sento',
       }),
     }),
-    AiModule,
-    QdrantModule,
-    ProposalModule,
   ],
   controllers: [AppController],
   providers: [Logger],

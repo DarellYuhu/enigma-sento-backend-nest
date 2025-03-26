@@ -7,6 +7,10 @@ export class CreateProposalDto {
 
   @IsString()
   @IsNotEmpty()
+  workgroupId: string;
+
+  @IsString()
+  @IsNotEmpty()
   fileName: string;
 
   @IsString()

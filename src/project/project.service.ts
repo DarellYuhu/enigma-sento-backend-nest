@@ -24,28 +24,39 @@ export class ProjectService {
   ) {}
 
   async create(payload: CreateProjectRequestDto, userId: string) {
-    const { name, workgroupId, allocationType, captions, hashtags } = payload;
-    const project = await this.prisma.$transaction(async (db) => {
-      const workgroupUser = await db.workgroupUser.findFirst({
-        where: { workgroupId, userId, User: { role: 'CREATOR' } },
-      });
-
-      if (!workgroupUser)
-        throw new NotFoundException('Workgroup user not found');
-
-      return db.project.create({
-        data: {
-          name,
-          workgroupId,
-          allocationType,
-          captions: captions?.split('\n'),
-          hashtags,
-          workgroupUserId: workgroupUser.id,
-        },
-      });
+    const {
+      name,
+      workgroupId,
+      allocationType,
+      captions,
+      hashtags,
+      proposalId,
+    } = payload;
+    let Proposal = {};
+    const workgroup = await this.prisma.workgroup.findUnique({
+      where: { id: workgroupId },
     });
-
-    return project;
+    const workgroupUser = await this.prisma.workgroupUser
+      .findFirstOrThrow({
+        where: { workgroupId, userId, User: { role: 'CREATOR' } },
+      })
+      .catch(() => {
+        throw new NotFoundException('Workgroup user not found');
+      });
+    if (workgroup.withTicket === true && !proposalId)
+      throw new BadRequestException('Proposal is required');
+    if (proposalId) Proposal = { connect: { id: proposalId } };
+    return this.prisma.project.create({
+      data: {
+        name,
+        workgroupId,
+        allocationType,
+        captions: captions?.split('\n'),
+        hashtags,
+        workgroupUserId: workgroupUser.id,
+        Proposal,
+      },
+    });
   }
 
   findAll() {
@@ -81,8 +92,11 @@ export class ProjectService {
     return `This action returns a #${id} project`;
   }
 
-  update(id: number, updateProjectDto: UpdateProjectDto) {
-    return `This action updates a #${id} project`;
+  update(id: string, updateProjectDto: UpdateProjectDto) {
+    return this.prisma.project.update({
+      where: { id },
+      data: updateProjectDto,
+    });
   }
 
   remove(id: number) {

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { Workgroup } from '../entities/workgroup.entity';
 
 export class CreateWorkgroupRequestDto {
@@ -13,6 +13,9 @@ export class CreateWorkgroupRequestDto {
   @IsNumber()
   @IsNotEmpty()
   projectStoryPerUser: number;
+
+  @IsBoolean()
+  withTicket: boolean;
 }
 
 export class CreateWorkgroupResponseDto {

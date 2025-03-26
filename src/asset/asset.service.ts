@@ -133,7 +133,7 @@ export class AssetService {
         this.aiService.embeddingImage({ text: payload.query }),
       ]);
       const result = await Promise.all([
-        this.qdrantService.query('text-based', text, 0.6),
+        this.qdrantService.query('text-based', text, 0.5),
         this.qdrantService.query('image-based', img, 0.1),
       ]);
       ids = result.flat();
