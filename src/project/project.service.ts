@@ -147,6 +147,7 @@ export class ProjectService {
     } = project;
 
     let storyIndex = 0;
+    let offset = 0;
     const contentForEachStory: Map<string, number> = new Map();
     let randomizedStory = shuffle(prismaStory);
 
@@ -168,7 +169,6 @@ export class ProjectService {
                 if (project.allocationType === 'GENERIC') {
                   const mappedStory = new Map<string, number>();
                   let storyIndex = 0;
-                  let offset = 0;
                   Array.from({ length: amontOfTroops }).forEach(() => {
                     if (mappedStory.has(randomizedStory[storyIndex].id)) {
                       const value = mappedStory.get(
