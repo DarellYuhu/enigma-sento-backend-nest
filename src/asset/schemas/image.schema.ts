@@ -42,3 +42,4 @@ export class Image {
   location?: Location;
 }
 export const ImageSchema = SchemaFactory.createForClass(Image);
+ImageSchema.index({ description: 'text', tags: 'text' }, { name: 'text' });

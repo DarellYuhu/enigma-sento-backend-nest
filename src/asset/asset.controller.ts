@@ -78,10 +78,12 @@ export class AssetController {
   async getImages(
     @Query('search') search: string,
     @Query('collectionId') collectionId: string,
+    @Query('fullText') fullText: string,
   ): Promise<GetImagesDto> {
     const data = await this.assetService.getImages({
       query: search,
       collectionId,
+      fullText: fullText === 'true',
     });
     return { message: 'success', data };
   }

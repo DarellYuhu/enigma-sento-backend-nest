@@ -123,11 +123,15 @@ export class AssetService {
     return this.color.find({}).lean();
   }
 
-  async getImages(payload: { query: string; collectionId: string }) {
+  async getImages(payload: {
+    query: string;
+    collectionId: string;
+    fullText: boolean;
+  }) {
     let ids: string[] = [];
     let filter: RootFilterQuery<Image> = {};
 
-    if (payload.query) {
+    if (payload.query && payload.fullText === false) {
       const [text, img] = await Promise.all([
         this.aiService.embeddingText(payload.query),
         this.aiService.embeddingImage({ text: payload.query }),
@@ -151,6 +155,10 @@ export class AssetService {
       } else {
         filter._id = { $in: collection.assets };
       }
+    }
+
+    if (payload.fullText) {
+      filter.$text = { $search: payload.query };
     }
 
     const data = (
