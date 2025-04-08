@@ -36,7 +36,6 @@ export class QdrantService {
       group_by: 'id',
       query,
     });
-    // console.log('huhi');
     if (collectionName === 'image-based') {
       const map = groups.map((item) => ({
         id: item.id,

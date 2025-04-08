@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { GeoJson, GeoJsonSchema } from './geoJson.schema';
+import { Types } from 'mongoose';
 
 @Schema({ _id: false })
 export class Location {
@@ -29,7 +30,7 @@ export class Image {
   tags: string[];
   @Prop({
     ref: 'People',
-    type: [String],
+    type: [Types.ObjectId],
     validate: {
       validator: function (value: string[]) {
         return new Set(value.map((v) => v.toString())).size === value.length;
@@ -37,7 +38,7 @@ export class Image {
       message: 'Duplicate asset IDs are not allowed.',
     },
   })
-  people: string[];
+  people: Types.ObjectId[];
   @Prop({ type: LocationSchema, required: false })
   location?: Location;
 }

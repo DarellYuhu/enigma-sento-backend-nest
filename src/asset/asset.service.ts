@@ -8,13 +8,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { S3Client, S3File } from 'bun';
 import { parseBuffer } from 'music-metadata';
 import { Music } from './schemas/music.schema';
-import { Model, RootFilterQuery, Types } from 'mongoose';
+import { Model, PipelineStage, Types } from 'mongoose';
 import { Font } from './schemas/font.schema';
 import { Color } from './schemas/color.schema';
 import { ConfigService } from '@nestjs/config';
 import { AddFontRequestDto } from './dto/add-font.dto';
 import * as xlsx from 'xlsx';
-import { plainToInstance } from 'class-transformer';
+import { plainToInstance, Type } from 'class-transformer';
 import { ColorValidator } from './validator/color.validator';
 import { validate } from 'class-validator';
 import { AddRepImageRequestDto } from './dto/add-rep-image.dto';
@@ -123,55 +123,82 @@ export class AssetService {
     return this.color.find({}).lean();
   }
 
-  async getImages(payload: {
+  async getImages({
+    query,
+    searchType = 'semantic',
+    collectionId,
+  }: {
     query: string;
     collectionId: string;
-    fullText: boolean;
+    searchType: 'full-text' | 'semantic' | 'people';
   }) {
-    let ids: string[] = [];
-    let filter: RootFilterQuery<Image> = {};
+    let ids: Types.ObjectId[] = [];
+    let filter: PipelineStage[] = [
+      { $sort: { createdAt: -1 } },
+      { $limit: 50 },
+      {
+        $lookup: {
+          from: 'peoples',
+          localField: 'people',
+          foreignField: '_id',
+          as: 'people',
+        },
+      },
+    ];
 
-    if (payload.query && payload.fullText === false) {
+    if (query && searchType === 'semantic') {
       const [text, img] = await Promise.all([
-        this.aiService.embeddingText(payload.query),
-        this.aiService.embeddingImage({ text: payload.query }),
+        this.aiService.embeddingText(query),
+        this.aiService.embeddingImage({ text: query }),
       ]);
       const result = await Promise.all([
         this.qdrantService.query('text-based', text, 0.5),
         this.qdrantService.query('image-based', img, 0.1),
       ]);
-      ids = result.flat();
-      filter = { _id: { $in: ids } };
+      ids = result.flat().map((id) => new Types.ObjectId(id));
+      filter.push({ $match: { _id: { $in: ids } } });
     }
 
-    if (payload.collectionId) {
-      const collection = await this.collectionService.findOne(
-        payload.collectionId,
-      );
+    if (collectionId) {
+      const collection = await this.collectionService.findOne(collectionId);
       if (ids.length > 0) {
-        filter._id = {
-          $in: ids.filter((id) => collection.assets.includes(id)),
-        };
+        filter.push({
+          $match: {
+            _id: {
+              $in: ids
+                .filter((id) => collection.assets.includes(id.toString()))
+                .map((id) => new Types.ObjectId(id)),
+            },
+          },
+        });
       } else {
-        filter._id = { $in: collection.assets };
+        filter.push({
+          $match: {
+            _id: { $in: collection.assets.map((id) => new Types.ObjectId(id)) },
+          },
+        });
       }
     }
 
-    if (payload.fullText) {
-      filter.$text = { $search: payload.query };
+    if (searchType === 'full-text') {
+      filter.unshift({
+        $match: {
+          $text: {
+            $search: this.buildExactTextSearch(query),
+          },
+        },
+      });
     }
 
-    const data = (
-      await this.image
-        .find(filter)
-        .sort([['createdAt', 'desc']])
-        .limit(50)
-        .populate('people')
-        .lean()
-    ).map((item) => {
+    if (searchType === 'people')
+      filter.push({
+        $match: { people: { $elemMatch: { name: query } } },
+      });
+
+    const data = (await this.image.aggregate(filter)).map((item) => {
       return {
         ...item,
-        people: item.people as unknown as People[],
+        people: Object.values(item.people) as unknown as People[],
         url: this.minioS3.presign(item.path, { method: 'GET' }),
       };
     });
@@ -205,7 +232,15 @@ export class AssetService {
             value: await this.aiService.embeddingText(t),
           })),
         ]);
-        return { _id, name, path: target, vectors, ...metadata, ...item };
+        return {
+          _id,
+          name,
+          path: target,
+          vectors,
+          ...metadata,
+          ...item,
+          people: item.people.map((p) => new Types.ObjectId(p)),
+        };
       }),
     );
     const data = normalized.flatMap((item) =>
@@ -386,6 +421,12 @@ export class AssetService {
       height,
       size,
     };
+  }
+
+  private buildExactTextSearch(userInput: string): any {
+    const sanitized = userInput.trim().replace(/"/g, '');
+    const exactPhrase = `"${sanitized}"`;
+    return exactPhrase;
   }
 
   private async getVideoMetadata(source: string) {
