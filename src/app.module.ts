@@ -49,6 +49,7 @@ import { ProposalModule } from './proposal/proposal.module';
       envFilePath: ['.env.development', '.env.staging', '.env.production'],
       isGlobal: true,
       expandVariables: true,
+      ignoreEnvFile: true,
     }),
     MongooseModule.forRootAsync({
       inject: [ConfigService],

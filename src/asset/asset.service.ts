@@ -135,7 +135,7 @@ export class AssetService {
     let ids: Types.ObjectId[] = [];
     let filter: PipelineStage[] = [
       { $sort: { createdAt: -1 } },
-      { $limit: 50 },
+      { $limit: 1000 },
       {
         $lookup: {
           from: 'peoples',
@@ -194,6 +194,7 @@ export class AssetService {
       filter.push({
         $match: { people: { $elemMatch: { name: query } } },
       });
+    filter.push({ $limit: 50 });
 
     const data = (await this.image.aggregate(filter)).map((item) => {
       return {
