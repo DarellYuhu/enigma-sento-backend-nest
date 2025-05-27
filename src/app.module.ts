@@ -18,6 +18,8 @@ import { TaskModule } from './task/task.module';
 import { AiModule } from './core/ai/ai.module';
 import { QdrantModule } from './core/qdrant/qdrant.module';
 import { ProposalModule } from './proposal/proposal.module';
+import { LayoutModule } from './layout/layout.module';
+import { PrismaModule } from './core/prisma/prisma.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { ProposalModule } from './proposal/proposal.module';
     AiModule,
     QdrantModule,
     ProposalModule,
+    LayoutModule,
+    PrismaModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

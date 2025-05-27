@@ -4,7 +4,6 @@ import { StoryController } from './story.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Story, StorySchema } from './schemas/story.schema';
 import { MinioS3Module } from 'src/core/minio-s3/minio-s3.module';
-import { PrismaService } from 'src/core/prisma/prisma.service';
 import { AssetModule } from 'src/asset/asset.module';
 import { BullModule } from '@nestjs/bullmq';
 
@@ -16,7 +15,7 @@ import { BullModule } from '@nestjs/bullmq';
     MinioS3Module,
   ],
   controllers: [StoryController],
-  providers: [StoryService, PrismaService],
+  providers: [StoryService],
   exports: [StoryService, MongooseModule],
 })
 export class StoryModule {}

@@ -26,6 +26,7 @@ model User {
   AuthoredProposal Proposal[]      @relation("Author")
   ApprovedProposal Proposal[]      @relation("Approver")
   Feedback         Feedback[]
+  Layout           Layout[]
 }
 
 model Workgroup {
@@ -192,6 +193,17 @@ model Feedback {
   Submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   userId       String
   User         User       @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Layout {
+  id        Int    @id @default(autoincrement())
+  name      String
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
+  template  Json
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
