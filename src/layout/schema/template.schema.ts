@@ -7,6 +7,7 @@ export const templateSchema = z.object({
   }),
   shapes: z.array(
     z.object({
+      // these one came from the client
       x: z.number(),
       y: z.number(),
       width: z.number(),
@@ -15,7 +16,16 @@ export const templateSchema = z.object({
       align: z.enum(['left', 'center', 'right', 'justify']),
       rotation: z.number(),
       type: z.enum(['rectangle', 'triangle', 'circle', 'text']),
+      fontId: z.string().optional(),
+      fill: z.string().optional(),
       value: z.string().optional(),
+      imagePath: z.string().optional(),
+
+      // additional fields
+      imageId: z.number().optional(),
+      imageUrl: z.string().optional(),
     }),
   ),
 });
+
+export type TemplateSchema = z.infer<typeof templateSchema>;

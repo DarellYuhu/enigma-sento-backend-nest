@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { LayoutService } from './layout.service';
 import { CreateLayoutDto } from './dto/create-layout.dto';
 
@@ -10,6 +10,16 @@ export class LayoutController {
   async create(@Body() createLayoutDto: CreateLayoutDto) {
     const data = await this.layoutService.upsert(createLayoutDto);
     return { message: 'success', data };
+  }
+
+  @Get()
+  getAll() {
+    return this.layoutService.getAll();
+  }
+
+  @Get(':id')
+  getOne(@Param('id') id: string) {
+    return this.layoutService.getOne(+id);
   }
 
   @Patch(':id')
