@@ -98,8 +98,9 @@ export class AssetService {
     return result.map(({ name, path, _id }) => ({ name, path, _id }));
   }
 
-  async findAllFont() {
-    return (await this.font.find({}).lean()).map((item) => ({
+  async findAllFont(fontId?: string[]) {
+    const query = fontId ? { _id: { $in: fontId } } : {};
+    return (await this.font.find(query).lean()).map((item) => ({
       ...item,
       url: this.minioS3.presign(item.path, { method: 'GET' }),
     }));

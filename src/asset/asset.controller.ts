@@ -44,8 +44,8 @@ export class AssetController {
   }
 
   @Get('fonts')
-  async findAllFont() {
-    const data = await this.assetService.findAllFont();
+  async findAllFont(@Query('fontId') fontId: string[]) {
+    const data = await this.assetService.findAllFont(fontId);
     return { message: 'success', data };
   }
 
