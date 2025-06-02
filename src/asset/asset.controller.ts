@@ -49,6 +49,12 @@ export class AssetController {
     return { message: 'success', data };
   }
 
+  @Get('fonts/:id')
+  async getFontById(@Param('id') id: string) {
+    const data = await this.assetService.getFontById(id);
+    return { message: 'success', data };
+  }
+
   @Delete('fonts/:id')
   async deleteFont(@Param('id') id: string) {
     await this.assetService.deleteFont(id);
@@ -66,6 +72,12 @@ export class AssetController {
   async addColors(@UploadedFile() file: Express.Multer.File) {
     await this.assetService.addColors(file);
     return { message: 'success' };
+  }
+
+  @Get('colors/:id')
+  async getColorById(@Param('id') id: string) {
+    const data = await this.assetService.getColorById(id);
+    return { message: 'success', data };
   }
 
   @Post('images')

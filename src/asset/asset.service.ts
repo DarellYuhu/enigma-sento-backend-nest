@@ -98,6 +98,16 @@ export class AssetService {
     return result.map(({ name, path, _id }) => ({ name, path, _id }));
   }
 
+  async getFontById(id: string) {
+    const font = await this.font
+      .findOne({ _id: new Types.ObjectId(id) })
+      .lean();
+    return {
+      ...font,
+      url: this.minioS3.presign(font.path, { method: 'GET' }),
+    };
+  }
+
   async findAllFont(fontId?: string[]) {
     const query = fontId ? { _id: { $in: fontId } } : {};
     return (await this.font.find(query).lean()).map((item) => ({
@@ -118,6 +128,10 @@ export class AssetService {
     const errors = await validate(instance);
     if (errors.length > 0) throw new BadRequestException('Invalid model');
     await this.color.insertMany(instance.data);
+  }
+
+  async getColorById(id: string) {
+    return this.color.findOne({ _id: new Types.ObjectId(id) }).lean();
   }
 
   findAllColor() {
