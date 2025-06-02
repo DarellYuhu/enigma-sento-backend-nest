@@ -88,6 +88,12 @@ export class AssetController {
     return { message: 'success', data };
   }
 
+  @Get('images/:id')
+  async getImageById(@Param('id') id: string) {
+    const data = await this.assetService.getImageById(id);
+    return { message: 'success', data };
+  }
+
   @Post('repurpose/images')
   async addRepImages(@Body() addRepImageRequestDto: AddRepImageRequestDto) {
     const data = await this.assetService.addRepImages(addRepImageRequestDto);

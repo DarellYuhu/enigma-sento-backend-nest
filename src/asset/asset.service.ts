@@ -207,6 +207,19 @@ export class AssetService {
     return data;
   }
 
+  async getImageById(id: string) {
+    return this.image
+      .findOne({ _id: new Types.ObjectId(id) })
+      .lean()
+      .then((item) => {
+        console.log(item);
+        return {
+          ...item,
+          url: this.minioS3.presign(item.path, { method: 'GET' }),
+        };
+      });
+  }
+
   async addImages(payload: AddImageRequestDto) {
     const normalized = await Promise.all(
       payload.data.map(async ({ name, path, ...item }) => {
