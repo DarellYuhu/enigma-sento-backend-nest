@@ -29,3 +29,4 @@ export const templateSchema = z.object({
 });
 
 export type TemplateSchema = z.infer<typeof templateSchema>;
+export type Shape = TemplateSchema['shapes'][number];

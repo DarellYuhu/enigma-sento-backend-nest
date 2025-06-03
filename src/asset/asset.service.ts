@@ -14,7 +14,7 @@ import { Color } from './schemas/color.schema';
 import { ConfigService } from '@nestjs/config';
 import { AddFontRequestDto } from './dto/add-font.dto';
 import * as xlsx from 'xlsx';
-import { plainToInstance, Type } from 'class-transformer';
+import { plainToInstance } from 'class-transformer';
 import { ColorValidator } from './validator/color.validator';
 import { validate } from 'class-validator';
 import { AddRepImageRequestDto } from './dto/add-rep-image.dto';
@@ -148,7 +148,7 @@ export class AssetService {
     searchType: 'full-text' | 'semantic' | 'people';
   }) {
     let ids: Types.ObjectId[] = [];
-    let filter: PipelineStage[] = [
+    const filter: PipelineStage[] = [
       { $sort: { createdAt: -1 } },
       { $limit: 1000 },
       {

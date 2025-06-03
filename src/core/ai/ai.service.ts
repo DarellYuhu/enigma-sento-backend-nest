@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 
@@ -16,22 +16,30 @@ export class AiService {
   }
 
   async embeddingText(txt: string) {
-    const { data } = await firstValueFrom(
-      this.httpService.post<number[][]>(`${this.TEIUri}/embed`, {
-        inputs: txt,
-      }),
-    );
-    return data[0];
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.post<number[][]>(`${this.TEIUri}/embed`, {
+          inputs: txt,
+        }),
+      );
+      return data[0];
+    } catch {
+      throw new InternalServerErrorException('Text embedding error');
+    }
   }
 
   async embeddingImage(payload: { uri?: string; text?: string }) {
-    const { data } = await firstValueFrom(
-      this.httpService.post<CLIPResponse>(`${this.CLIPUri}/post`, {
-        data: [payload],
-        execEndpoint: '/',
-      }),
-    );
-    return data.data[0].embedding;
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.post<CLIPResponse>(`${this.CLIPUri}/post`, {
+          data: [payload],
+          execEndpoint: '/',
+        }),
+      );
+      return data.data[0].embedding;
+    } catch {
+      throw new InternalServerErrorException('Image embedding error');
+    }
   }
 }
 

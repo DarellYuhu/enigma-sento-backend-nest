@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  StreamableFile,
+} from '@nestjs/common';
 import { LayoutService } from './layout.service';
 import { CreateLayoutDto } from './dto/create-layout.dto';
 
@@ -29,5 +37,14 @@ export class LayoutController {
   ) {
     const data = await this.layoutService.upsert(updateLayoutDto, +id);
     return { message: 'success', data };
+  }
+
+  @Post(':id/generate-images')
+  async generateImage(@Param('id') id: string) {
+    const data = await this.layoutService.generateImage(+id);
+    return new StreamableFile(data, {
+      type: 'image/png',
+      disposition: 'attachment; filename=layout.png',
+    });
   }
 }
