@@ -205,8 +205,28 @@ model Layout {
   creator   User   @relation(fields: [creatorId], references: [id])
   template  Json
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  groupItem GroupItem[]
+}
+
+model GroupItem {
+  layoutId      Int
+  layout        Layout      @relation(fields: [layoutId], references: [id])
+  layoutGroupId Int
+  layoutGroup   LayoutGroup @relation(fields: [layoutGroupId], references: [id])
+
+  @@unique([layoutId, layoutGroupId])
+}
+
+model LayoutGroup {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String?
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  groupItem GroupItem[]
 }
 
 model File {

@@ -20,6 +20,7 @@ import { QdrantModule } from './core/qdrant/qdrant.module';
 import { ProposalModule } from './proposal/proposal.module';
 import { LayoutModule } from './layout/layout.module';
 import { PrismaModule } from './core/prisma/prisma.module';
+import { LayoutGroupModule } from './layout-group/layout-group.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { PrismaModule } from './core/prisma/prisma.module';
     ProposalModule,
     LayoutModule,
     PrismaModule,
+    LayoutGroupModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
