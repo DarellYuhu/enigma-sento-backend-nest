@@ -16,6 +16,7 @@ import {
   type CanvasRenderingContext2D,
 } from 'canvas';
 import { AssetService } from 'src/asset/asset.service';
+import { FieldConfig } from 'types';
 
 @Injectable()
 export class LayoutService {
@@ -82,8 +83,11 @@ export class LayoutService {
     return layout;
   }
 
-  getAll() {
+  getAll(groupId?: number) {
     return this.prisma.layout.findMany({
+      where: {
+        groupItem: groupId && { some: { layoutGroupId: groupId } },
+      },
       include: {
         creator: {
           select: {
@@ -97,9 +101,23 @@ export class LayoutService {
     });
   }
 
-  async generateImage(layoutId: number) {
+  async generateImage(
+    layoutId: number,
+    config?: { templateConfig: FieldConfig[]; idx: number },
+  ) {
     const layout = await this.getOne(layoutId);
     const template = layout.template as TemplateSchema;
+
+    if (config.templateConfig) {
+      for (const shape of template.shapes) {
+        for (const field of config.templateConfig) {
+          if (shape.key === field.key && !shape[field.targetField]) {
+            shape[field.targetField] =
+              field.value[config.idx % field.value.length];
+          }
+        }
+      }
+    }
 
     const targetDir = Math.floor(Math.random() * 1000000000).toString();
 

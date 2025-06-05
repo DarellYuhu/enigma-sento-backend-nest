@@ -134,8 +134,19 @@ export class AssetService {
     return this.color.findOne({ _id: new Types.ObjectId(id) }).lean();
   }
 
-  findAllColor() {
-    return this.color.find({}).lean();
+  async findAllColor(collectionId?: string) {
+    const filter: PipelineStage[] = [];
+    if (collectionId) {
+      const collection = await this.collectionService.findOne(collectionId);
+      filter.push({
+        $match: {
+          _id: {
+            $in: collection.assets.map((id) => new Types.ObjectId(id)),
+          },
+        },
+      });
+    }
+    return this.color.aggregate(filter);
   }
 
   async getImages({
@@ -143,9 +154,9 @@ export class AssetService {
     searchType = 'semantic',
     collectionId,
   }: {
-    query: string;
-    collectionId: string;
-    searchType: 'full-text' | 'semantic' | 'people';
+    query?: string;
+    collectionId?: string;
+    searchType?: 'full-text' | 'semantic' | 'people';
   }) {
     let ids: Types.ObjectId[] = [];
     const filter: PipelineStage[] = [

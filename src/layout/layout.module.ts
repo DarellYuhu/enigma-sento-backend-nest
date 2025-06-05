@@ -8,5 +8,6 @@ import { AssetModule } from 'src/asset/asset.module';
   imports: [MinioS3Module, AssetModule],
   controllers: [LayoutController],
   providers: [LayoutService],
+  exports: [LayoutService],
 })
 export class LayoutModule {}
