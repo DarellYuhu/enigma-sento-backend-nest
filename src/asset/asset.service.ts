@@ -237,7 +237,6 @@ export class AssetService {
       .findOne({ _id: new Types.ObjectId(id) })
       .lean()
       .then((item) => {
-        console.log(item);
         return {
           ...item,
           url: this.minioS3.presign(item.path, { method: 'GET' }),
