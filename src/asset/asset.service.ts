@@ -135,7 +135,7 @@ export class AssetService {
   }
 
   async findAllColor(collectionId?: string) {
-    const filter: PipelineStage[] = [];
+    const filter: PipelineStage[] = [{ $sort: { createdAt: -1 } }];
     if (collectionId) {
       const collection = await this.collectionService.findOne(collectionId);
       filter.push({
@@ -161,7 +161,6 @@ export class AssetService {
     let ids: Types.ObjectId[] = [];
     const filter: PipelineStage[] = [
       { $sort: { createdAt: -1 } },
-      { $limit: 1000 },
       {
         $lookup: {
           from: 'peoples',
