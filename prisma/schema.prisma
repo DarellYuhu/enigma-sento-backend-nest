@@ -212,7 +212,7 @@ model Layout {
 
 model GroupItem {
   layoutId      Int
-  layout        Layout      @relation(fields: [layoutId], references: [id])
+  layout        Layout      @relation(fields: [layoutId], references: [id], onDelete: Cascade)
   layoutGroupId Int
   layoutGroup   LayoutGroup @relation(fields: [layoutGroupId], references: [id])
 

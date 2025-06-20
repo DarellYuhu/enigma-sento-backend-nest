@@ -101,6 +101,10 @@ export class LayoutService {
     });
   }
 
+  delete(id: number) {
+    return this.prisma.layout.delete({ where: { id } });
+  }
+
   async generateImage(
     layoutId: number,
     config?: { templateConfig: FieldConfig[]; idx: number },

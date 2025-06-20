@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -37,6 +38,11 @@ export class LayoutController {
   ) {
     const data = await this.layoutService.upsert(updateLayoutDto, +id);
     return { message: 'success', data };
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.layoutService.delete(+id);
   }
 
   @Post(':id/generate-images')
