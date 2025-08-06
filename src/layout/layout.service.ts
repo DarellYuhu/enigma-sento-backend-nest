@@ -282,6 +282,22 @@ export class LayoutService {
 
   private async handleImageRender(box: Shape, ctx: CanvasRenderingContext2D) {
     const img = await loadImage(box.imageUrl);
-    ctx.drawImage(img, 0, 0, box.width, box.height);
+    const boxRatio = box.width / box.height;
+    const imgRatio = img.width / img.height;
+
+    let sx = 0,
+      sy = 0,
+      sWidth = img.width,
+      sHeight = img.height;
+
+    if (imgRatio > boxRatio) {
+      sWidth = img.height * boxRatio;
+      sx = (img.width - sWidth) / 2;
+    } else {
+      sHeight = img.width / boxRatio;
+      sy = (img.height - sHeight) / 2;
+    }
+
+    ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, box.width, box.height);
   }
 }

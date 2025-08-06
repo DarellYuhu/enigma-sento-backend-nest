@@ -74,7 +74,7 @@ export class LayoutGroupService {
         tryAssign(!shape.fill, 'colorCollectionId');
         tryAssign(!shape.fontId, 'fontCollectionId');
       } else {
-        tryAssign(!shape.fill && !shape.imageUrl, 'imageCollectionId');
+        tryAssign(!shape.fill && !shape.imageId, 'imageCollectionId');
       }
     }
 
