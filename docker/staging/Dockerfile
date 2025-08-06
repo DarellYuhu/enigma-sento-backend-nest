@@ -6,11 +6,11 @@ ENV BUN_INSTALL="$HOME/.bun"
 ENV PATH="$BUN_INSTALL/bin:$PATH"
 
 RUN apt-get update && apt-get install -y curl unzip ffmpeg libsm6 libxext6 && \
-    curl -fsSL https://bun.sh/install | bash
+  curl -fsSL https://bun.sh/install | bash
 
 # Install MinIO client
 RUN curl -sSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc && \
-    chmod +x /usr/local/bin/mc
+  chmod +x /usr/local/bin/mc
 
 RUN apt-get update && apt-get install -y build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
 
@@ -45,8 +45,8 @@ COPY --from=prerelease /app/scripts ./scripts
 RUN pip install -r ./scripts/requirements.txt
 
 # run the app
-RUN mkdir ./tmp
-RUN mkdir ./dist/tmp
+RUN mkdir ./tmp && \
+  mkdir ./dist/tmp
 RUN useradd -m enigma && chown -R enigma /app
 USER enigma
 EXPOSE 2002/tcp

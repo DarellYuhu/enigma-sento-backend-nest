@@ -1,11 +1,64 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { S3Client } from 'bun';
+import { isBefore, subDays } from 'date-fns';
+import * as minio from 'minio';
 
 @Injectable()
 export class StorageService {
-  constructor(@Inject('S3_CLIENT') private minioS3: S3Client) {}
+  private readonly NODE_ENV = process.env.NODE_ENV;
+  private readonly logger = new Logger(StorageService.name);
+  private readonly minio = new minio.Client({
+    endPoint: process.env.MINIO_HOST,
+    port: parseInt(process.env.MINIO_PORT as string | undefined),
+    useSSL: false,
+    accessKey: process.env.MINIO_ACCESS_KEY,
+    secretKey: process.env.MINIO_SECRET_KEY,
+  });
+  constructor(
+    @Inject('S3_CLIENT') private minioS3: S3Client,
+    private readonly scheduler: SchedulerRegistry,
+  ) {}
 
   getUploadUrl(path: string) {
     return this.minioS3.presign(path, { bucket: 'tmp', method: 'PUT' });
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, {
+    name: 'cleanup-storage-scheduler',
+  })
+  async cleanupStorage() {
+    if (this.NODE_ENV === 'development')
+      this.scheduler.deleteCronJob('cleanup-storage-scheduler');
+
+    const oneWeekAgo = subDays(new Date(), 5);
+    const tmpObjects: string[] = [];
+    const generatedObjects: string[] = [];
+
+    const tmpStreamPromise = new Promise<void>((resolve, reject) => {
+      const stream = this.minio.listObjectsV2('tmp', '', true);
+      stream.on('data', (obj) => {
+        tmpObjects.push(obj.name);
+      });
+      stream.on('error', reject);
+      stream.on('end', resolve);
+    });
+
+    const generatedStreamPromise = new Promise<void>((resolve, reject) => {
+      const stream = this.minio.listObjectsV2('generated-content', '', true);
+      stream.on('data', (obj) => {
+        if (isBefore(obj.lastModified, oneWeekAgo)) {
+          generatedObjects.push(obj.name);
+        }
+      });
+      stream.on('error', reject);
+      stream.on('end', resolve);
+    });
+
+    await Promise.all([tmpStreamPromise, generatedStreamPromise]);
+    await this.minio.removeObjects('tmp', tmpObjects);
+    await this.minio.removeObjects('generated-content', generatedObjects);
+
+    this.logger.log('✅ Cleanup scheduler finished succesfully');
   }
 }

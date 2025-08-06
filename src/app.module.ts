@@ -21,6 +21,7 @@ import { ProposalModule } from './proposal/proposal.module';
 import { LayoutModule } from './layout/layout.module';
 import { PrismaModule } from './core/prisma/prisma.module';
 import { LayoutGroupModule } from './layout-group/layout-group.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { LayoutGroupModule } from './layout-group/layout-group.module';
     LayoutModule,
     PrismaModule,
     LayoutGroupModule,
+    ScheduleModule.forRoot(),
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

@@ -10,3 +10,4 @@ mc.exe
 .dockerignore
 .prettierrc
 sento*.tar.gz
+scripts/venv
