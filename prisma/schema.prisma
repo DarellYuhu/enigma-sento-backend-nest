@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -21,54 +15,54 @@ model User {
   role             Role
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
-  WorkgroupUser    WorkgroupUser[]
-  Workgroup        Workgroup[]
-  AuthoredProposal Proposal[]      @relation("Author")
-  ApprovedProposal Proposal[]      @relation("Approver")
   Feedback         Feedback[]
   Layout           Layout[]
+  ApprovedProposal Proposal[]      @relation("Approver")
+  AuthoredProposal Proposal[]      @relation("Author")
+  Workgroup        Workgroup[]
+  WorkgroupUser    WorkgroupUser[]
 }
 
 model Workgroup {
   id                  String                @id @default(uuid())
   name                String
   session             Int
-  projectStoryPerUser Int
   managerId           String
-  withTicket          Boolean               @default(false)
-  Manager             User                  @relation(fields: [managerId], references: [id])
-  DistributionGroup   GroupDistribution[]
-  WorkgroupUser       WorkgroupUser[]
-  TaskHistory         TaskHistory[]
-  Project             Project[]
-  ContentDistribution ContentDistribution[]
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
+  projectStoryPerUser Int
+  withTicket          Boolean               @default(false)
+  ContentDistribution ContentDistribution[]
+  DistributionGroup   GroupDistribution[]
+  Project             Project[]
   Proposal            Proposal[]
+  TaskHistory         TaskHistory[]
+  Manager             User                  @relation(fields: [managerId], references: [id])
+  WorkgroupUser       WorkgroupUser[]
 }
 
 model WorkgroupUser {
   id                Int                 @id @default(autoincrement())
   userId            String
-  User              User                @relation(fields: [userId], references: [id])
   workgroupId       String
-  Workgroup         Workgroup           @relation(fields: [workgroupId], references: [id])
   isDeleted         Boolean             @default(false)
-  WorkgroupUserTask WorkgroupUserTask[]
   Project           Project[]
+  User              User                @relation(fields: [userId], references: [id])
+  Workgroup         Workgroup           @relation(fields: [workgroupId], references: [id])
+  WorkgroupUserTask WorkgroupUserTask[]
 
   @@unique([workgroupId, userId])
 }
 
 model GroupDistribution {
-  id                  String                @id @default(uuid())
   code                String
   amontOfTroops       Int
-  isDeleted           Boolean               @default(false)
   workgroupId         String
+  id                  String                @id @default(uuid())
+  isDeleted           Boolean               @default(false)
+  ContentDistribution ContentDistribution[]
   Workgroup           Workgroup             @relation(fields: [workgroupId], references: [id])
   WorkgroupUserTask   WorkgroupUserTask[]
-  ContentDistribution ContentDistribution[]
 
   @@unique([code, workgroupId])
 }
@@ -83,11 +77,11 @@ model TaskHistory {
 
 model WorkgroupUserTask {
   workgroupUserId     Int
-  WorkgroupUser       WorkgroupUser     @relation(fields: [workgroupUserId], references: [id])
   groupDistributionId String
-  GroupDistribution   GroupDistribution @relation(fields: [groupDistributionId], references: [id])
   taskHistoryId       Int
+  GroupDistribution   GroupDistribution @relation(fields: [groupDistributionId], references: [id])
   TaskHistory         TaskHistory       @relation(fields: [taskHistoryId], references: [id])
+  WorkgroupUser       WorkgroupUser     @relation(fields: [workgroupUserId], references: [id])
 
   @@unique([workgroupUserId, groupDistributionId, taskHistoryId])
 }
@@ -96,19 +90,18 @@ model Project {
   id                  String                @id @default(uuid())
   name                String
   status              Boolean               @default(false)
-  workgroupId         String
-  Workgroup           Workgroup             @relation(fields: [workgroupId], references: [id])
   workgroupUserId     Int
-  WorkgroupUser       WorkgroupUser         @relation(fields: [workgroupUserId], references: [id])
-  Story               Story[]
+  workgroupId         String
   allocationType      AllocationType
   captions            String[]
   hashtags            String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @default(now()) @updatedAt
   ContentDistribution ContentDistribution[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  Proposal  Proposal?
+  Workgroup           Workgroup             @relation(fields: [workgroupId], references: [id])
+  WorkgroupUser       WorkgroupUser         @relation(fields: [workgroupUserId], references: [id])
+  Proposal            Proposal?
+  Story               Story[]
 
   @@unique([name, workgroupUserId])
 }
@@ -116,34 +109,34 @@ model Project {
 model Story {
   id                  String                @id @default(uuid())
   projectId           String
-  Project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   ContentDistribution ContentDistribution[]
   DistributionStory   DistributionStory[]
+  Project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model DistributionStory {
   contentDistributionId String
-  ContentDistribution   ContentDistribution @relation(fields: [contentDistributionId], references: [id], onDelete: Cascade)
   storyId               String
-  Story                 Story               @relation(fields: [storyId], references: [id], onDelete: Cascade)
   amountOfContents      Int
   offset                Int
+  ContentDistribution   ContentDistribution @relation(fields: [contentDistributionId], references: [id], onDelete: Cascade)
+  Story                 Story               @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@unique([contentDistributionId, storyId])
 }
 
 model ContentDistribution {
-  id                    String              @id @default(uuid())
   session               Int
   path                  String
   workgroupId           String
-  Workgroup             Workgroup           @relation(fields: [workgroupId], references: [id])
   groupDistributionCode String
-  GroupDistribution     GroupDistribution   @relation(fields: [groupDistributionCode], references: [id])
-  projectId             String
-  Project               Project             @relation(fields: [projectId], references: [id])
   storyId               String?
+  id                    String              @id @default(uuid())
+  projectId             String
+  GroupDistribution     GroupDistribution   @relation(fields: [groupDistributionCode], references: [id])
+  Project               Project             @relation(fields: [projectId], references: [id])
   Story                 Story?              @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  Workgroup             Workgroup           @relation(fields: [workgroupId], references: [id])
   DistributionStory     DistributionStory[]
 
   @@unique([workgroupId, groupDistributionCode, session, projectId, storyId], name: "uniqueConstraint")
@@ -154,88 +147,114 @@ model Proposal {
   title           String
   status          ProposalStatus @default(WAITING)
   authorId        String
-  Author          User           @relation("Author", fields: [authorId], references: [id])
   approverId      String?
-  Approver        User?          @relation("Approver", fields: [approverId], references: [id])
   projectId       String?        @unique
-  Project         Project?       @relation(fields: [projectId], references: [id])
   submissionId    Int?           @unique
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  approvedAt      DateTime?
   workgroupId     String
+  Approver        User?          @relation("Approver", fields: [approverId], references: [id])
+  Author          User           @relation("Author", fields: [authorId], references: [id])
+  Project         Project?       @relation(fields: [projectId], references: [id])
+  FinalSubmission Submission?    @relation("finalSubmission", fields: [submissionId], references: [id])
   Workgroup       Workgroup      @relation(fields: [workgroupId], references: [id])
-  FinalSubmission Submission?    @relation(name: "finalSubmission", fields: [submissionId], references: [id])
-
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  approvedAt DateTime?
-  Submission Submission[] @relation("Submission")
+  Submission      Submission[]   @relation("Submission")
 }
 
 model Submission {
   id              Int            @id @default(autoincrement())
-  fileName        String
   filePath        String
   status          ProposalStatus @default(WAITING)
   proposalId      String
-  Proposal        Proposal       @relation("Submission", fields: [proposalId], references: [id], onDelete: Cascade)
-  FinalSubmission Proposal?      @relation("finalSubmission")
+  createdAt       DateTime       @default(now())
+  updateAt        DateTime       @updatedAt
+  fileName        String
   Feedback        Feedback[]
-
-  createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  FinalSubmission Proposal?      @relation("finalSubmission")
+  Proposal        Proposal       @relation("Submission", fields: [proposalId], references: [id], onDelete: Cascade)
 }
 
 model Feedback {
   id           Int        @id @default(autoincrement())
   message      String
-  fileName     String?
   filePath     String?
   submissionId Int
-  Submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   userId       String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  fileName     String?
+  Submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   User         User       @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model Layout {
-  id        Int    @id @default(autoincrement())
+  id        Int         @id @default(autoincrement())
   name      String
   creatorId String
-  creator   User   @relation(fields: [creatorId], references: [id])
-  template  Json
-
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+  template  Json
   groupItem GroupItem[]
+  creator   User        @relation(fields: [creatorId], references: [id])
 }
 
 model GroupItem {
   layoutId      Int
-  layout        Layout      @relation(fields: [layoutId], references: [id], onDelete: Cascade)
   layoutGroupId Int
   layoutGroup   LayoutGroup @relation(fields: [layoutGroupId], references: [id])
+  layout        Layout      @relation(fields: [layoutId], references: [id], onDelete: Cascade)
 
   @@unique([layoutId, layoutGroupId])
 }
 
 model LayoutGroup {
-  id          Int     @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   name        String
   description String?
-
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  groupItem GroupItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  groupItem   GroupItem[]
 }
 
 model File {
-  id   Int    @id @default(autoincrement())
-  name String
-  path String
+  id       Int    @id @default(autoincrement())
+  name     String
+  path     String
+  bucket   String
+  fullPath String
 
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  bundleFile BundleFile[]
+}
+
+model Folder {
+  id        String   @id @default(uuid())
+  name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  slug      String   @unique
+  bundel    Bundle[]
+}
+
+model Bundle {
+  id         String       @id @default(uuid())
+  name       String
+  folderId   String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  folder     Folder       @relation(fields: [folderId], references: [id])
+  bundleFile BundleFile[]
+}
+
+model BundleFile {
+  bundleId String
+  bundle   Bundle @relation(fields: [bundleId], references: [id])
+  fileId   Int
+  file     File   @relation(fields: [fileId], references: [id])
+
+  @@unique([bundleId, fileId])
 }
 
 enum Role {

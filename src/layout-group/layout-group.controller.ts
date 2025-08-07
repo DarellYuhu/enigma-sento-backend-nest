@@ -29,18 +29,26 @@ export class LayoutGroupController {
     @Body() payload: Record<string, string>,
     @Param('id') id: string,
     @Query('total') total?: string,
+    @Query('link') link?: string,
   ) {
     const map = new Map<string, string | string[]>();
     for (const [key, value] of Object.entries(payload)) {
       map.set(key, value);
     }
 
-    const data = await this.layoutGroupService.generateContent(+id, map, total);
+    const data = await this.layoutGroupService.generateContent(
+      +id,
+      map,
+      total,
+      link,
+    );
 
-    return new StreamableFile(data, {
-      type: 'application/zip',
-      disposition: 'attachment; filename=generated-result.zip',
-    });
+    if (typeof data !== 'undefined') {
+      return new StreamableFile(data, {
+        type: 'application/zip',
+        disposition: 'attachment; filename=generated-result.zip',
+      });
+    }
   }
 
   @Get(':id/variable-fields')

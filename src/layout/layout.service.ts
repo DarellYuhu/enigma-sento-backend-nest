@@ -40,7 +40,9 @@ export class LayoutService {
         const file = await this.prisma.file.create({
           data: {
             name,
-            path: `/assets/layout/${name}`,
+            bucket: 'assets',
+            path: `layout/${name}`,
+            fullPath: `/assets/layout/${name}`,
           },
         });
         valid.data.shapes[idx].imageId = file.id;
@@ -73,7 +75,9 @@ export class LayoutService {
           const file = await this.prisma.file.findUnique({
             where: { id: item.imageId },
           });
-          item.imageUrl = this.minioS3.presign(file.path, { method: 'GET' });
+          item.imageUrl = this.minioS3.presign(file.fullPath, {
+            method: 'GET',
+          });
         }
         return item;
       }),

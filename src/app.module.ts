@@ -22,6 +22,7 @@ import { LayoutModule } from './layout/layout.module';
 import { PrismaModule } from './core/prisma/prisma.module';
 import { LayoutGroupModule } from './layout-group/layout-group.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { FolderModule } from './folder/folder.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         dbName: 'enigma-sento',
       }),
     }),
+    FolderModule,
   ],
   controllers: [AppController],
   providers: [Logger],

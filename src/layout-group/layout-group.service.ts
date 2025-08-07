@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { CreateLayoutGroupDto } from './dto/create-layout-group.dto';
 import { TemplateSchema } from 'src/layout/schema/template.schema';
@@ -8,9 +8,18 @@ import { CollectionService } from 'src/collection/collection.service';
 import { LayoutService } from 'src/layout/layout.service';
 import { FieldConfig, FieldMap, VarField } from 'types';
 import { ZipFile } from 'yazl';
+import { Folder } from '@prisma/client';
+import * as minio from 'minio';
 
 @Injectable()
 export class LayoutGroupService {
+  private readonly minio = new minio.Client({
+    endPoint: process.env.MINIO_HOST,
+    port: parseInt(process.env.MINIO_PORT as string | undefined),
+    useSSL: false,
+    accessKey: process.env.MINIO_ACCESS_KEY,
+    secretKey: process.env.MINIO_SECRET_KEY,
+  });
   constructor(
     private readonly prisma: PrismaService,
     private readonly asset: AssetService,
@@ -85,7 +94,19 @@ export class LayoutGroupService {
     groupId: number,
     fieldValue: Map<string, string | string[]>,
     iteration = '10',
+    link?: string,
   ) {
+    let folder: Folder | undefined = undefined;
+    if (link) {
+      const folderId = link.split('/').pop();
+      folder = await this.prisma.folder
+        .findUniqueOrThrow({
+          where: { id: folderId },
+        })
+        .catch(() => {
+          throw new NotFoundException('Folder not found!');
+        });
+    }
     const varFields = await this.getVariableFields(groupId);
     const withValues: FieldConfig[] = [];
     for (const item of varFields) {
@@ -135,19 +156,41 @@ export class LayoutGroupService {
       }),
     );
 
-    const zip = new ZipFile();
-    generatedImgs.forEach((img, i) => {
-      zip.addBuffer(img, `img-${i}.png`);
-    });
-    zip.end();
-    const chunks: Buffer[] = [];
-    const buf = await new Promise<Buffer>((resolve, reject) => {
-      zip.outputStream
-        .on('data', (chunk) => chunks.push(Buffer.from(chunk)))
-        .on('end', () => resolve(Buffer.concat(chunks)))
-        .on('error', reject);
-    });
+    if (folder) {
+      const bundle = await this.prisma.bundle.create({
+        data: { name: new Date().getTime().toString(), folderId: folder.id },
+      });
+      const files = await Promise.all(
+        generatedImgs.map(async (img, idx) => {
+          const name = `img-${idx}.png`;
+          const bucket = 'generated-content';
+          const path = `folder/${folder.slug}/${bundle.name}/${name}`;
+          await this.minio.putObject(bucket, path, img);
+          return { name, bucket, path, fullPath: `/${bucket}/${path}` };
+        }),
+      );
+      const payload = (
+        await this.prisma.file.createManyAndReturn({ data: files })
+      ).map((f) => ({ fileId: f.id }));
+      await this.prisma.bundle.update({
+        where: { id: bundle.id },
+        data: { bundleFile: { createMany: { data: payload } } },
+      });
+    } else {
+      const zip = new ZipFile();
+      generatedImgs.forEach((img, i) => {
+        zip.addBuffer(img, `img-${i}.png`);
+      });
+      zip.end();
+      const chunks: Buffer[] = [];
+      const buf = await new Promise<Buffer>((resolve, reject) => {
+        zip.outputStream
+          .on('data', (chunk) => chunks.push(Buffer.from(chunk)))
+          .on('end', () => resolve(Buffer.concat(chunks)))
+          .on('error', reject);
+      });
 
-    return buf;
+      return buf;
+    }
   }
 }
