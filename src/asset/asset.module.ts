@@ -4,7 +4,6 @@ import { AssetController } from './asset.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Music, MusicSchema } from './schemas/music.schema';
 import { Font, FontSchema } from './schemas/font.schema';
-import { MinioS3Module } from 'src/core/minio-s3/minio-s3.module';
 import { Color, ColorSchema } from './schemas/color.schema';
 import { Video, VideoSchema } from './schemas/video.schema';
 import { Banner, BannerSchema } from './schemas/banner.schema';
@@ -19,7 +18,6 @@ import { CollectionModule } from 'src/collection/collection.module';
     CollectionModule,
     AiModule,
     QdrantModule,
-    MinioS3Module,
     MongooseModule.forFeature([
       { name: Music.name, schema: MusicSchema },
       { name: Font.name, schema: FontSchema },

@@ -23,6 +23,8 @@ import { PrismaModule } from './core/prisma/prisma.module';
 import { LayoutGroupModule } from './layout-group/layout-group.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { FolderModule } from './folder/folder.module';
+import { BundleModule } from './bundle/bundle.module';
+import { MinioS3Module } from './core/minio-s3/minio-s3.module';
 
 @Module({
   imports: [
@@ -43,6 +45,9 @@ import { FolderModule } from './folder/folder.module';
     LayoutModule,
     PrismaModule,
     LayoutGroupModule,
+    FolderModule,
+    BundleModule,
+    MinioS3Module,
     ScheduleModule.forRoot(),
     BullModule.forRootAsync({
       inject: [ConfigService],
@@ -67,7 +72,6 @@ import { FolderModule } from './folder/folder.module';
         dbName: 'enigma-sento',
       }),
     }),
-    FolderModule,
   ],
   controllers: [AppController],
   providers: [Logger],

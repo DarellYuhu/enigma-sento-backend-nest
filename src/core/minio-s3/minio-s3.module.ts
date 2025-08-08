@@ -1,4 +1,4 @@
-import { Module, OnModuleInit, Provider } from '@nestjs/common';
+import { Global, Module, OnModuleInit, Provider } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 const S3ClientProvider: Provider = {
@@ -13,6 +13,7 @@ const S3ClientProvider: Provider = {
   },
 };
 
+@Global()
 @Module({
   providers: [S3ClientProvider],
   exports: ['S3_CLIENT'],
