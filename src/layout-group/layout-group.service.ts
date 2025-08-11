@@ -10,6 +10,7 @@ import { FieldConfig, FieldMap, VarField } from 'types';
 import { ZipFile } from 'yazl';
 import { Folder } from '@prisma/client';
 import * as minio from 'minio';
+import { shuffle } from 'lodash';
 
 @Injectable()
 export class LayoutGroupService {
@@ -116,11 +117,11 @@ export class LayoutGroupService {
       switch (item.property) {
         case 'value':
           // the array of text
-          value = fieldValue.get(item.id) as string[];
+          value = shuffle(fieldValue.get(item.id)) as string[];
           break;
         case 'colorCollectionId':
-          const colors: Color[] = await this.asset.findAllColor(
-            fieldValue.get(item.id) as string,
+          const colors: Color[] = shuffle(
+            await this.asset.findAllColor(fieldValue.get(item.id) as string),
           );
           // array of hex color
           value = colors.map((color) => color.primary);
@@ -129,7 +130,9 @@ export class LayoutGroupService {
           const collection = await this.collection.findOne(
             fieldValue.get(item.id) as string,
           );
-          const fonts = await this.asset.findAllFont(collection.assets);
+          const fonts = shuffle(
+            await this.asset.findAllFont(collection.assets),
+          );
           // array of font id (fill be load on generate)
           value = fonts.map((font) => font._id.toString());
           break;
@@ -138,14 +141,14 @@ export class LayoutGroupService {
             collectionId: fieldValue.get(item.id) as string,
           });
           // array of image url
-          value = images.map((img) => img.url);
+          value = shuffle(images.map((img) => img.url));
           break;
       }
 
       withValues.push({ ...item, value, targetField });
     }
 
-    const templates = await this.layout.getAll(groupId);
+    const templates = shuffle(await this.layout.getAll(groupId));
 
     const generatedImgs = await Promise.all(
       Array.from({ length: +iteration }).map((_, i) => {
@@ -160,15 +163,34 @@ export class LayoutGroupService {
       const bundle = await this.prisma.bundle.create({
         data: { name: new Date().getTime().toString(), folderId: folder.id },
       });
+      const bucket = 'generated-content';
       const files = await Promise.all(
         generatedImgs.map(async (img, idx) => {
           const name = `img-${idx}.png`;
-          const bucket = 'generated-content';
           const path = `folder/${folder.slug}/${bundle.name}/${name}`;
           await this.minio.putObject(bucket, path, img);
           return { name, bucket, path, fullPath: `/${bucket}/${path}` };
         }),
       );
+      if (fieldValue.has('captions')) {
+        const captions = fieldValue.get('captions') as string[];
+        const buf = Buffer.from(captions.join('\n'), 'utf-8');
+        const path = `folder/${folder.slug}/${bundle.name}/captions.txt`;
+        await this.minio.putObject(bucket, path, buf);
+        await this.prisma.bundle.update({
+          where: { id: bundle.id },
+          data: {
+            captionFile: {
+              create: {
+                name: 'captions.txt',
+                bucket: 'generated-content',
+                fullPath: `/${bucket}/${path}`,
+                path,
+              },
+            },
+          },
+        });
+      }
       const payload = (
         await this.prisma.file.createManyAndReturn({ data: files })
       ).map((f) => ({ fileId: f.id }));

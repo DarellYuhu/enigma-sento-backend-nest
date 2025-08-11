@@ -227,6 +227,7 @@ model File {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
   bundleFile BundleFile[]
+  Bundle     Bundle[]     @relation(name: "captionFile")
 }
 
 model Folder {
@@ -239,13 +240,16 @@ model Folder {
 }
 
 model Bundle {
-  id         String       @id @default(uuid())
-  name       String
-  folderId   String
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  folder     Folder       @relation(fields: [folderId], references: [id])
-  bundleFile BundleFile[]
+  id            String       @id @default(uuid())
+  name          String
+  notes         String?
+  folderId      String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  folder        Folder       @relation(fields: [folderId], references: [id])
+  bundleFile    BundleFile[]
+  captionFileId Int?
+  captionFile   File?        @relation(fields: [captionFileId], references: [id], name: "captionFile")
 }
 
 model BundleFile {

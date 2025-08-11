@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Res,
@@ -12,6 +13,7 @@ import { BundleService } from './bundle.service';
 import { DownloadBundleDto } from './dto/download-bundle.dto';
 import { createReadStream, rmSync } from 'fs';
 import type { Response } from 'express';
+import { UpdateBundleDto } from './dto/update-bundle.dto';
 
 @Controller('bundles')
 export class BundleController {
@@ -20,11 +22,6 @@ export class BundleController {
   @Get()
   findAll(@Query('folder_id') folderId?: string) {
     return this.bundleService.findAll({ folderId });
-  }
-
-  @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.bundleService.findById(id);
   }
 
   @Post('download')
@@ -50,5 +47,15 @@ export class BundleController {
       type: 'application/zip',
       disposition: 'attachment; filename="grouped-contents.zip"',
     });
+  }
+
+  @Get(':id')
+  findById(@Param('id') id: string) {
+    return this.bundleService.findById(id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() payload: UpdateBundleDto) {
+    return this.bundleService.update(id, payload);
   }
 }
