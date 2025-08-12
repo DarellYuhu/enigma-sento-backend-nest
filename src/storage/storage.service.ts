@@ -9,8 +9,8 @@ export class StorageService {
   private readonly NODE_ENV = process.env.NODE_ENV;
   private readonly logger = new Logger(StorageService.name);
   private readonly minio = new minio.Client({
-    endPoint: process.env.MINIO_HOST,
-    port: parseInt(process.env.MINIO_PORT as string | undefined),
+    endPoint: process.env.MINIO_HOST || '',
+    port: parseInt(process.env.MINIO_PORT || ''),
     useSSL: false,
     accessKey: process.env.MINIO_ACCESS_KEY,
     secretKey: process.env.MINIO_SECRET_KEY,
@@ -38,7 +38,7 @@ export class StorageService {
     const tmpStreamPromise = new Promise<void>((resolve, reject) => {
       const stream = this.minio.listObjectsV2('tmp', '', true);
       stream.on('data', (obj) => {
-        tmpObjects.push(obj.name);
+        tmpObjects.push(obj.name!);
       });
       stream.on('error', reject);
       stream.on('end', resolve);
@@ -47,8 +47,8 @@ export class StorageService {
     const generatedStreamPromise = new Promise<void>((resolve, reject) => {
       const stream = this.minio.listObjectsV2('generated-content', '', true);
       stream.on('data', (obj) => {
-        if (isBefore(obj.lastModified, oneWeekAgo)) {
-          generatedObjects.push(obj.name);
+        if (isBefore(obj.lastModified!, oneWeekAgo)) {
+          generatedObjects.push(obj.name!);
         }
       });
       stream.on('error', reject);

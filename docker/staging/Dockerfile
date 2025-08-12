@@ -23,13 +23,13 @@ WORKDIR /app
 FROM base AS install
 SHELL ["/bin/bash", "-c"]
 RUN mkdir -p /temp/dev
-COPY package.json bun.lockb /temp/dev/
+COPY package.json bun.lock /temp/dev/
 RUN cd /temp/dev && bun install --frozen-lockfile
 
 # install with --production (exclude devDependencies)
 RUN mkdir -p /temp/prod
 COPY prisma /temp/prod/prisma
-COPY package.json bun.lockb /temp/prod/
+COPY package.json bun.lock /temp/prod/
 RUN cd /temp/prod && bun install --frozen-lockfile --production && bunx prisma generate
 
 FROM base AS prerelease

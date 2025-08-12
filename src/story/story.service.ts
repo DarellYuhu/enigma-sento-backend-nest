@@ -152,7 +152,7 @@ export class StoryService {
     if (!story) throw new NotFoundException('Story not found');
     if (
       ((story.type !== 'SYSTEM_GENERATE' ||
-        story.captions?.length < (story.contentPerStory ?? -1)) &&
+        (story.captions?.length || 0) < (story.contentPerStory ?? -1)) &&
         project.allocationType === 'SPECIFIC') ||
       !story.data
     )
@@ -222,7 +222,7 @@ export class StoryService {
     if (!story) throw new NotFoundException('Story not found');
     if (
       (story.contentPerStory !== payload.files.length ||
-        story.captions?.length < story.contentPerStory) &&
+        (story.captions?.length || 0) < story.contentPerStory) &&
       project.allocationType === 'SPECIFIC'
     )
       throw new BadRequestException('Not enough files or captions');
@@ -275,15 +275,17 @@ export class StoryService {
 
   async remove(id: string) {
     const data = await this.story.findOneAndDelete({ _id: id });
-    await Promise.all(
-      data.data.map((item) =>
-        Promise.all(
-          item.images.map(async (image) => {
-            await this.minioS3.delete(image.path, { bucket: 'assets' });
-          }),
+    if (!data) throw new NotFoundException('Story not found!');
+    if (data.data)
+      await Promise.all(
+        data.data.map((item) =>
+          Promise.all(
+            item.images.map(async (image) => {
+              await this.minioS3.delete(image.path, { bucket: 'assets' });
+            }),
+          ),
         ),
-      ),
-    );
+      );
     return await this.prisma.story.delete({ where: { id } });
   }
 }

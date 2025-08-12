@@ -33,9 +33,13 @@ export class ProjectService {
       proposalId,
     } = payload;
     let Proposal = {};
-    const workgroup = await this.prisma.workgroup.findUnique({
-      where: { id: workgroupId },
-    });
+    const workgroup = await this.prisma.workgroup
+      .findUniqueOrThrow({
+        where: { id: workgroupId },
+      })
+      .catch(() => {
+        throw new NotFoundException('Workgroup not found!');
+      });
     const workgroupUser = await this.prisma.workgroupUser
       .findFirstOrThrow({
         where: { workgroupId, userId, User: { role: 'CREATOR' } },

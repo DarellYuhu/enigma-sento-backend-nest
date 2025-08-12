@@ -15,6 +15,7 @@ async function builder() {
       'nock',
       'class-transformer',
       '@prisma/client',
+      'canvas',
     ],
   });
 }

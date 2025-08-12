@@ -1,4 +1,9 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateLayoutDto } from './dto/create-layout.dto';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -68,14 +73,18 @@ export class LayoutService {
   }
 
   async getOne(id: number) {
-    const layout = await this.prisma.layout.findUnique({ where: { id } });
+    const layout = await this.prisma.layout
+      .findUniqueOrThrow({ where: { id } })
+      .catch(() => {
+        throw new NotFoundException('Layout not found');
+      });
     const shapes = await Promise.all(
       (layout.template as TemplateSchema).shapes.map(async (item) => {
         if (item.imageId) {
           const file = await this.prisma.file.findUnique({
             where: { id: item.imageId },
           });
-          item.imageUrl = this.minioS3.presign(file.fullPath, {
+          item.imageUrl = this.minioS3.presign(file!.fullPath, {
             method: 'GET',
           });
         }
@@ -90,7 +99,7 @@ export class LayoutService {
   getAll(groupId?: number) {
     return this.prisma.layout.findMany({
       where: {
-        groupItem: groupId && { some: { layoutGroupId: groupId } },
+        groupItem: { ...(groupId && { some: { layoutGroupId: groupId } }) },
       },
       include: {
         creator: {
@@ -116,7 +125,7 @@ export class LayoutService {
     const layout = await this.getOne(layoutId);
     const template = layout.template as TemplateSchema;
 
-    if (config.templateConfig) {
+    if (config?.templateConfig) {
       for (const shape of template.shapes) {
         for (const field of config.templateConfig) {
           if (shape.key === field.key && !shape[field.targetField]) {
@@ -130,7 +139,7 @@ export class LayoutService {
     const targetDir = Math.floor(Math.random() * 1000000000).toString();
 
     for (const shape of template.shapes.filter((shape) => shape.fontId)) {
-      await this.loadFont(shape.fontId, shape.key, targetDir);
+      if (shape.fontId) await this.loadFont(shape.fontId, shape.key, targetDir);
     }
 
     const canvas = createCanvas(
@@ -258,7 +267,7 @@ export class LayoutService {
     ctx: CanvasRenderingContext2D,
   ) {
     const words = text.split(' ');
-    const lines = [];
+    const lines: string[] = [];
     let line = '';
 
     for (let i = 0; i < words.length; i++) {
@@ -285,6 +294,7 @@ export class LayoutService {
   }
 
   private async handleImageRender(box: Shape, ctx: CanvasRenderingContext2D) {
+    if (!box.imageUrl) return;
     const img = await loadImage(box.imageUrl);
     const boxRatio = box.width / box.height;
     const imgRatio = img.width / img.height;

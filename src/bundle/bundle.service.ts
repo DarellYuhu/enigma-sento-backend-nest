@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { S3Client } from 'bun';
 import { createWriteStream } from 'fs';
 import * as path from 'path';
@@ -6,18 +6,23 @@ import archiver from 'archiver';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { UpdateBundleDto } from './dto/update-bundle.dto';
 import * as minio from 'minio';
+import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
+import { subDays } from 'date-fns';
 
 @Injectable()
 export class BundleService {
+  private readonly NODE_ENV = process.env.NODE_ENV;
   private readonly MINIO_CLI = process.env.MINIO_CLIENT_COMMAND;
+  private readonly logger = new Logger(BundleService.name);
   private readonly minio = new minio.Client({
-    endPoint: process.env.MINIO_HOST,
-    port: parseInt(process.env.MINIO_PORT as string | undefined),
+    endPoint: process.env.MINIO_HOST || '',
+    port: parseInt(process.env.MINIO_PORT ?? ''),
     useSSL: false,
     accessKey: process.env.MINIO_ACCESS_KEY,
     secretKey: process.env.MINIO_SECRET_KEY,
   });
   constructor(
+    private readonly scheduler: SchedulerRegistry,
     private readonly prisma: PrismaService,
     @Inject('S3_CLIENT') private readonly minioS3: S3Client,
   ) {}
@@ -26,6 +31,7 @@ export class BundleService {
     return this.prisma.bundle.findMany({
       where: { folderId },
       include: { _count: { select: { bundleFile: true } } },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -40,7 +46,7 @@ export class BundleService {
     });
     const normalized = {
       ...data,
-      bundleFile: data.bundleFile.map((b) => ({
+      bundleFile: data?.bundleFile.map((b) => ({
         ...b.file,
         url: this.minioS3.presign(b.file.fullPath),
       })),
@@ -48,7 +54,14 @@ export class BundleService {
     return normalized;
   }
 
-  async groupAndDownload(bundleIds: string[], count: number) {
+  async groupAndDownload(
+    bundleIds: string[],
+    keys: { count?: number; groupKeys?: string[] },
+  ) {
+    const count = keys.groupKeys ? keys.groupKeys.length : keys.count!;
+    const groupKeys =
+      keys.groupKeys ||
+      Array.from({ length: keys.count! }).map((_, idx) => (idx + 1).toString());
     const bundles = await this.prisma.bundle.findMany({
       where: { id: { in: bundleIds } },
       include: { bundleFile: { select: { file: true } }, captionFile: true },
@@ -56,22 +69,26 @@ export class BundleService {
     const files = bundles.flatMap((bundle) =>
       bundle.bundleFile.map((f) => ({ ...f.file, bundleName: bundle.name })),
     );
-    const captions = await Promise.all(
-      bundles
-        .filter((bundle) => bundle.captionFile)
-        .map(async (bundle) => {
-          const stream = await this.minio.getObject(
-            bundle.captionFile.bucket,
-            bundle.captionFile.path,
-          );
-          const buf = (await new Response(stream).text()).split('\n');
-          return buf;
-        }),
-    );
+    const captions = (
+      await Promise.all(
+        bundles
+          .filter((bundle) => bundle.captionFile)
+          .map(async (bundle) => {
+            const stream = await this.minio.getObject(
+              bundle.captionFile!.bucket,
+              bundle.captionFile!.path,
+            );
+            const buf = (
+              await new Response(stream as unknown as ReadableStream).text()
+            ).split('\n');
+            return buf;
+          }),
+      )
+    ).flat();
     const groupedCaptions = new Map<string, string[]>();
-    captions.flat().forEach((caption, idx) => {
-      const group = ((idx % count) + 1).toString();
-      if (groupedCaptions.has(group)) groupedCaptions.get(group).push(caption);
+    captions.forEach((caption, idx) => {
+      const group = groupKeys[idx % count];
+      if (groupedCaptions.has(group)) groupedCaptions.get(group)?.push(caption);
       else groupedCaptions.set(group, [caption]);
     });
 
@@ -85,9 +102,9 @@ export class BundleService {
       ),
     );
     const putImages = files.map(async (file, idx) => {
-      await Bun.$`${this.MINIO_CLI} cp myminio/${file.fullPath} myminio/generated-content/folder/${folderName}/${date}/${(idx % count) + 1}/${file.bundleName}-${file.name}`;
+      await Bun.$`${this.MINIO_CLI} cp myminio/${file.fullPath} myminio/generated-content/folder/${folderName}/${date}/${groupKeys[idx % count]}/${file.bundleName}-${file.name}`;
     });
-    await Promise.all([putCaptions, putImages]);
+    await Promise.all([...putCaptions, ...putImages]);
     await Bun.$`${this.MINIO_CLI} cp --recursive myminio/generated-content/folder/${folderName}/${date} ./tmp/`;
     const folderPath = path.join(__dirname, `../../tmp/${date}`);
     const zipPath = path.join(__dirname, `../../tmp/${date}.zip`);
@@ -105,5 +122,51 @@ export class BundleService {
       archive.finalize();
     });
     return { zipPath, folderPath };
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, {
+    name: 'bundle-cleanup-scheduler',
+  })
+  async bundleCleanupScheduler() {
+    if (this.NODE_ENV === 'development')
+      this.scheduler.deleteCronJob('bundle-cleanup-scheduler');
+    const threeDaysAgo = subDays(new Date(), 2);
+    const bundles = await this.prisma.bundle.findMany({
+      select: {
+        id: true,
+        captionFile: true,
+        bundleFile: { select: { file: true } },
+      },
+      where: { createdAt: { lt: threeDaysAgo } },
+    });
+    await this.minio.removeObjects(
+      'generated-content',
+      bundles.flatMap((bundle) => {
+        const files = bundle.bundleFile.map(({ file }) => file.path);
+        if (bundle.captionFile) files.push(bundle.captionFile.path);
+        return files;
+      }),
+    );
+    const deleteFiles = this.prisma.file.deleteMany({
+      where: {
+        OR: [
+          {
+            bundleFile: {
+              some: { bundleId: { in: bundles.map((bundle) => bundle.id) } },
+            },
+          },
+          {
+            Bundle: {
+              some: { id: { in: bundles.map((bundle) => bundle.id) } },
+            },
+          },
+        ],
+      },
+    });
+    const deleteBundles = this.prisma.bundle.deleteMany({
+      where: { id: { in: bundles.map((bundle) => bundle.id) } },
+    });
+    await this.prisma.$transaction([deleteFiles, deleteBundles]);
+    this.logger.log('Bundle cleanup successfully 🎉');
   }
 }

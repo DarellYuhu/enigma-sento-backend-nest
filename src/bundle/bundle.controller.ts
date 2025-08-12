@@ -8,12 +8,15 @@ import {
   Query,
   Res,
   StreamableFile,
+  UsePipes,
 } from '@nestjs/common';
 import { BundleService } from './bundle.service';
-import { DownloadBundleDto } from './dto/download-bundle.dto';
+import { downloadBundleSchema } from './dto/download-bundle.dto';
 import { createReadStream, rmSync } from 'fs';
-import type { Response } from 'express';
 import { UpdateBundleDto } from './dto/update-bundle.dto';
+import { ZodValidationPipe } from 'src/validation/zodValidation.pipe';
+import type { Response } from 'express';
+import type { DownloadBundleDto } from './dto/download-bundle.dto';
 
 @Controller('bundles')
 export class BundleController {
@@ -25,13 +28,14 @@ export class BundleController {
   }
 
   @Post('download')
+  @UsePipes(new ZodValidationPipe(downloadBundleSchema))
   async groupAndDownload(
     @Body() payload: DownloadBundleDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const { zipPath, folderPath } = await this.bundleService.groupAndDownload(
       payload.bundleIds,
-      payload.count,
+      { count: payload.count, groupKeys: payload.groupKeys },
     );
     res.on('finish', () => {
       try {

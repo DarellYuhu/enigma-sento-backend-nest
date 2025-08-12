@@ -254,9 +254,9 @@ model Bundle {
 
 model BundleFile {
   bundleId String
-  bundle   Bundle @relation(fields: [bundleId], references: [id])
+  bundle   Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
   fileId   Int
-  file     File   @relation(fields: [fileId], references: [id])
+  file     File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@unique([bundleId, fileId])
 }

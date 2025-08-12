@@ -15,7 +15,7 @@ export class CreateProjectRequestDto {
   @IsNotEmpty()
   @IsString()
   @IsOptional()
-  hashtags?: string;
+  hashtags?: string | null;
 
   @IsEnum(AllocationType)
   allocationType: AllocationType;

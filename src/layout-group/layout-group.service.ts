@@ -15,8 +15,8 @@ import { shuffle } from 'lodash';
 @Injectable()
 export class LayoutGroupService {
   private readonly minio = new minio.Client({
-    endPoint: process.env.MINIO_HOST,
-    port: parseInt(process.env.MINIO_PORT as string | undefined),
+    endPoint: process.env.MINIO_HOST || '',
+    port: parseInt(process.env.MINIO_PORT || ''),
     useSSL: false,
     accessKey: process.env.MINIO_ACCESS_KEY,
     secretKey: process.env.MINIO_SECRET_KEY,
@@ -130,6 +130,7 @@ export class LayoutGroupService {
           const collection = await this.collection.findOne(
             fieldValue.get(item.id) as string,
           );
+          if (!collection) return;
           const fonts = shuffle(
             await this.asset.findAllFont(collection.assets),
           );

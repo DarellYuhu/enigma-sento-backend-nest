@@ -13,6 +13,6 @@ export class FolderService {
   }
 
   findAll() {
-    return this.prisma.folder.findMany();
+    return this.prisma.folder.findMany({ orderBy: { createdAt: 'desc' } });
   }
 }

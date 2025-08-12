@@ -11,10 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
-import {
-  CreateProjectRequestDto,
-  CreateProjectResponseDto,
-} from './dto/create-project.dto';
+import { CreateProjectRequestDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 
@@ -24,10 +21,7 @@ export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
   @Post()
-  async create(
-    @Body() createProjectDto: CreateProjectRequestDto,
-    @Req() req,
-  ): Promise<CreateProjectResponseDto> {
+  async create(@Body() createProjectDto: CreateProjectRequestDto, @Req() req) {
     const user: JwtPayload = req.user;
     const data = await this.projectService.create(createProjectDto, user.sub);
     return { message: 'success', data };

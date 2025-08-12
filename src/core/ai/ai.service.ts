@@ -11,8 +11,8 @@ export class AiService {
     private readonly httpService: HttpService,
     private readonly config: ConfigService,
   ) {
-    this.TEIUri = this.config.get<string>('TEI_URI');
-    this.CLIPUri = this.config.get<string>('CLIP_URI');
+    this.TEIUri = this.config.get<string>('TEI_URI')!;
+    this.CLIPUri = this.config.get<string>('CLIP_URI')!;
   }
 
   async embeddingText(txt: string) {

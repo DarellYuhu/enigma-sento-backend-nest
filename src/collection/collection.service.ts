@@ -44,10 +44,10 @@ export class CollectionService {
   update(id: string, updateCollectionDto: UpdateCollectionDto) {
     const { newAssets, deletedAssets, ...payload } = updateCollectionDto;
     const updateQuery: UpdateQuery<People> = { ...payload };
-    if (deletedAssets?.length > 0) {
+    if ((deletedAssets?.length || 0) > 0) {
       updateQuery.$pull = { assets: { $in: deletedAssets } };
     }
-    if (newAssets?.length > 0) {
+    if ((newAssets?.length || 0) > 0) {
       updateQuery.$addToSet = { assets: { $each: newAssets } };
     }
     return this.collection

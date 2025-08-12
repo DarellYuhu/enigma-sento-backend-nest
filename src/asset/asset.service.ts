@@ -3,6 +3,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { S3Client, S3File } from 'bun';
@@ -102,6 +103,7 @@ export class AssetService {
     const font = await this.font
       .findOne({ _id: new Types.ObjectId(id) })
       .lean();
+    if (!font) throw new NotFoundException('Font not found');
     return {
       ...font,
       url: this.minioS3.presign(font.path, { method: 'GET' }),
@@ -138,6 +140,7 @@ export class AssetService {
     const filter: PipelineStage[] = [{ $sort: { createdAt: -1 } }];
     if (collectionId) {
       const collection = await this.collectionService.findOne(collectionId);
+      if (!collection) throw new NotFoundException('Collection not found');
       filter.push({
         $match: {
           _id: {
@@ -186,6 +189,7 @@ export class AssetService {
 
     if (collectionId) {
       const collection = await this.collectionService.findOne(collectionId);
+      if (!collection) throw new NotFoundException('Collection not found');
       if (ids.length > 0) {
         filter.push({
           $match: {
@@ -205,7 +209,7 @@ export class AssetService {
       }
     }
 
-    if (searchType === 'full-text') {
+    if (searchType === 'full-text' && query) {
       filter.unshift({
         $match: {
           $text: {
@@ -236,6 +240,7 @@ export class AssetService {
       .findOne({ _id: new Types.ObjectId(id) })
       .lean()
       .then((item) => {
+        if (!item) throw new NotFoundException('Image not found');
         return {
           ...item,
           url: this.minioS3.presign(item.path, { method: 'GET' }),
