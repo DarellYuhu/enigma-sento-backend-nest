@@ -23,7 +23,10 @@ export class BundleService {
   ) {}
 
   findAll({ folderId }: { folderId?: string }) {
-    return this.prisma.bundle.findMany({ where: { folderId } });
+    return this.prisma.bundle.findMany({
+      where: { folderId },
+      include: { _count: { select: { bundleFile: true } } },
+    });
   }
 
   update(id: string, payload: UpdateBundleDto) {
