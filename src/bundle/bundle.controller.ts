@@ -3,20 +3,24 @@ import {
   Controller,
   Get,
   Param,
+  ParseFilePipeBuilder,
   Patch,
   Post,
   Query,
   Res,
   StreamableFile,
-  UsePipes,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { BundleService } from './bundle.service';
 import { downloadBundleSchema } from './dto/download-bundle.dto';
-import { createReadStream, rmSync } from 'fs';
 import { UpdateBundleDto } from './dto/update-bundle.dto';
-import { ZodValidationPipe } from 'src/validation/zodValidation.pipe';
 import type { Response } from 'express';
 import type { DownloadBundleDto } from './dto/download-bundle.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { parseXlsxToObject } from 'src/core/utils';
+import { validXlsxSchema } from './dto/valid-xlsx.schema';
+import { createReadStream, rmSync } from 'fs';
 
 @Controller('bundles')
 export class BundleController {
@@ -28,25 +32,45 @@ export class BundleController {
   }
 
   @Post('download')
-  @UsePipes(new ZodValidationPipe(downloadBundleSchema))
+  @UseInterceptors(FileInterceptor('groupKeys'))
   async groupAndDownload(
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        })
+        .addMaxSizeValidator({ maxSize: 5 * 1024 * 1024 })
+        .build({ fileIsRequired: false }),
+    )
+    file: Express.Multer.File,
     @Body() payload: DownloadBundleDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { zipPath, folderPath } = await this.bundleService.groupAndDownload(
-      payload.bundleIds,
-      { count: payload.count, groupKeys: payload.groupKeys },
-    );
+    const parsed = downloadBundleSchema.parse({ ...payload, groupKeys: file });
+    let keys: string[] | undefined;
+    if (parsed.groupKeys) {
+      const parsedXlsx = parsed.groupKeys.buffer
+        ? parseXlsxToObject(parsed.groupKeys.buffer)
+        : undefined;
+      const validSchema = await validXlsxSchema.parseAsync(parsedXlsx);
+      keys = validSchema;
+    }
+    const data = await this.bundleService.groupAndDownload(payload.bundleIds, {
+      count: payload.count,
+      groupKeys: keys,
+    });
+    if (!data) return;
     res.on('finish', () => {
       try {
-        rmSync(zipPath, { force: true });
-        rmSync(folderPath, { recursive: true, force: true });
+        rmSync(data.zipPath, { force: true });
+        rmSync(data.folderPath, { recursive: true, force: true });
         console.log('Temp files deleted.');
       } catch (err) {
         console.error('Cleanup failed:', err);
       }
     });
-    const fileStream = createReadStream(zipPath);
+    const fileStream = createReadStream(data.zipPath);
     return new StreamableFile(fileStream, {
       type: 'application/zip',
       disposition: 'attachment; filename="grouped-contents.zip"',

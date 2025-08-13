@@ -15,4 +15,8 @@ export class FolderService {
   findAll() {
     return this.prisma.folder.findMany({ orderBy: { createdAt: 'desc' } });
   }
+
+  getGeneratedGroups(folderId: string) {
+    return this.prisma.generatedGroup.findMany({ where: { folderId } });
+  }
 }

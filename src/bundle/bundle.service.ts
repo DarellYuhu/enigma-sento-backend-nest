@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { S3Client } from 'bun';
 import { createWriteStream } from 'fs';
 import * as path from 'path';
@@ -8,6 +8,7 @@ import { UpdateBundleDto } from './dto/update-bundle.dto';
 import * as minio from 'minio';
 import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { subDays } from 'date-fns';
+import pLimit from 'p-limit';
 
 @Injectable()
 export class BundleService {
@@ -40,13 +41,17 @@ export class BundleService {
   }
 
   async findById(id: string) {
-    const data = await this.prisma.bundle.findUnique({
-      where: { id },
-      include: { bundleFile: { select: { file: true } } },
-    });
+    const data = await this.prisma.bundle
+      .findUniqueOrThrow({
+        where: { id },
+        include: { bundleFile: { select: { file: true } } },
+      })
+      .catch(() => {
+        throw new NotFoundException('Bundle not found!');
+      });
     const normalized = {
       ...data,
-      bundleFile: data?.bundleFile.map((b) => ({
+      bundleFile: data.bundleFile.map((b) => ({
         ...b.file,
         url: this.minioS3.presign(b.file.fullPath),
       })),
@@ -92,36 +97,48 @@ export class BundleService {
       else groupedCaptions.set(group, [caption]);
     });
 
-    const folderName = bundles[0].folderId;
+    const folderId = bundles[0].folderId;
     const date = new Date().getTime();
+    const limit = pLimit(25);
     const putCaptions = Array.from(groupedCaptions).map(([key, val]) =>
-      this.minio.putObject(
-        'generated-content',
-        `folder/${folderName}/${date}/${key}/captions.txt`,
-        val.join('\n'),
+      limit(() =>
+        this.minio.putObject(
+          'generated-content',
+          `folder/${folderId}/${date}/${key}/captions.txt`,
+          val.join('\n'),
+        ),
       ),
     );
     const putImages = files.map(async (file, idx) => {
-      await Bun.$`${this.MINIO_CLI} cp myminio/${file.fullPath} myminio/generated-content/folder/${folderName}/${date}/${groupKeys[idx % count]}/${file.bundleName}-${file.name}`;
+      limit(
+        () =>
+          Bun.$`${this.MINIO_CLI} cp myminio/${file.fullPath} myminio/generated-content/folder/${folderId}/${date}/${groupKeys[idx % count]}/${file.bundleName}-${file.name}`,
+      );
     });
     await Promise.all([...putCaptions, ...putImages]);
-    await Bun.$`${this.MINIO_CLI} cp --recursive myminio/generated-content/folder/${folderName}/${date} ./tmp/`;
-    const folderPath = path.join(__dirname, `../../tmp/${date}`);
-    const zipPath = path.join(__dirname, `../../tmp/${date}.zip`);
+    if (keys.groupKeys) {
+      await this.prisma.generatedGroup.create({
+        data: { name: date.toString(), folderId, groups: groupKeys },
+      });
+    } else {
+      await Bun.$`${this.MINIO_CLI} cp --recursive myminio/generated-content/folder/${folderId}/${date} ./tmp/`;
+      const folderPath = path.join(__dirname, `../../tmp/${date}`);
+      const zipPath = path.join(__dirname, `../../tmp/${date}.zip`);
 
-    // Step 1: Create zip and save to disk
-    await new Promise<void>((resolve, reject) => {
-      const output = createWriteStream(zipPath);
-      const archive = archiver('zip', { zlib: { level: 9 } });
+      // Step 1: Create zip and save to disk
+      await new Promise<void>((resolve, reject) => {
+        const output = createWriteStream(zipPath);
+        const archive = archiver('zip', { zlib: { level: 9 } });
 
-      output.on('close', () => resolve());
-      archive.on('error', (err) => reject(err));
+        output.on('close', () => resolve());
+        archive.on('error', (err) => reject(err));
 
-      archive.pipe(output);
-      archive.directory(folderPath, false);
-      archive.finalize();
-    });
-    return { zipPath, folderPath };
+        archive.pipe(output);
+        archive.directory(folderPath, false);
+        archive.finalize();
+      });
+      return { zipPath, folderPath };
+    }
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, {

@@ -231,12 +231,23 @@ model File {
 }
 
 model Folder {
+  id             String           @id @default(uuid())
+  name           String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  slug           String           @unique
+  bundel         Bundle[]
+  GeneratedGroup GeneratedGroup[]
+}
+
+model GeneratedGroup {
   id        String   @id @default(uuid())
-  name      String
+  name      String   @unique
+  groups    String[]
+  folderId  String
+  folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  slug      String   @unique
-  bundel    Bundle[]
 }
 
 model Bundle {
