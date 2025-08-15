@@ -2,6 +2,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -31,6 +32,11 @@ export class FolderController {
   @Get()
   async findAll() {
     return this.folderService.findAll();
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.folderService.delete(id);
   }
 
   @Get(':id/generated-groups')

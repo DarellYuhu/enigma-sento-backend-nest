@@ -257,7 +257,7 @@ model Bundle {
   folderId      String
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  folder        Folder       @relation(fields: [folderId], references: [id])
+  folder        Folder       @relation(fields: [folderId], references: [id], onDelete: Cascade)
   bundleFile    BundleFile[]
   captionFileId Int?
   captionFile   File?        @relation(fields: [captionFileId], references: [id], name: "captionFile")

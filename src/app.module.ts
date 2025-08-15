@@ -25,8 +25,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { FolderModule } from './folder/folder.module';
 import { BundleModule } from './bundle/bundle.module';
 import { MinioS3Module } from './core/minio-s3/minio-s3.module';
-import { APP_PIPE } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { MinioModule } from './minio/minio.module';
+import { APP_PIPE } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
     FolderModule,
     BundleModule,
     MinioS3Module,
+    MinioModule,
     ScheduleModule.forRoot(),
     BullModule.forRootAsync({
       inject: [ConfigService],

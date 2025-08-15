@@ -1,22 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { PrismaService } from 'src/core/prisma/prisma.service';
-import slugify from 'slugify';
 import { DownloadGroupsDto } from './dto/download-groups.dto';
-import archiver from 'archiver';
-import * as minio from 'minio';
 import { PassThrough } from 'stream';
+import { MinioService } from 'src/minio/minio.service';
+import slugify from 'slugify';
+import archiver from 'archiver';
 
 @Injectable()
 export class FolderService {
-  private readonly minio = new minio.Client({
-    endPoint: process.env.MINIO_HOST || '',
-    port: parseInt(process.env.MINIO_PORT || ''),
-    useSSL: false,
-    accessKey: process.env.MINIO_ACCESS_KEY,
-    secretKey: process.env.MINIO_SECRET_KEY,
-  });
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly minio: MinioService,
+  ) {}
 
   create(payload: CreateFolderDto) {
     const slug = slugify(payload.name, { lower: true, strict: true });
@@ -28,7 +24,14 @@ export class FolderService {
   }
 
   getGeneratedGroups(folderId: string) {
-    return this.prisma.generatedGroup.findMany({ where: { folderId } });
+    return this.prisma.generatedGroup.findMany({
+      where: { folderId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  delete(id: string) {
+    return this.prisma.folder.delete({ where: { id } });
   }
 
   async downloadGroups(folderId: string, payload: DownloadGroupsDto) {
