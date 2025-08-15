@@ -9,6 +9,7 @@ import {
 import { FolderService } from './folder.service';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { DownloadGroupsDto } from './dto/download-groups.dto';
 
 @Controller('folders')
 export class FolderController {
@@ -35,5 +36,10 @@ export class FolderController {
   @Get(':id/generated-groups')
   getGeneratedGroups(@Param('id') id: string) {
     return this.folderService.getGeneratedGroups(id);
+  }
+
+  @Post(':id/download')
+  downloadGroup(@Param('id') id: string, @Body() payload: DownloadGroupsDto) {
+    return this.folderService.downloadGroups(id, payload);
   }
 }

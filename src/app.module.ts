@@ -25,6 +25,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { FolderModule } from './folder/folder.module';
 import { BundleModule } from './bundle/bundle.module';
 import { MinioS3Module } from './core/minio-s3/minio-s3.module';
+import { APP_PIPE } from '@nestjs/core';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 @Module({
   imports: [
@@ -74,7 +76,7 @@ import { MinioS3Module } from './core/minio-s3/minio-s3.module';
     }),
   ],
   controllers: [AppController],
-  providers: [Logger],
+  providers: [Logger, { provide: APP_PIPE, useClass: ZodValidationPipe }],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

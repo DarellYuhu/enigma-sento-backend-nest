@@ -31,6 +31,7 @@
         "minio": "^8.0.5",
         "mongoose": "^8.10.1",
         "music-metadata": "^10.9.1",
+        "nestjs-zod": "^5.0.0-beta.20250812T233646",
         "p-limit": "^6.2.0",
         "reflect-metadata": "^0.2.0",
         "rxjs": "^7.8.1",
@@ -1449,6 +1450,8 @@
     "negotiator": ["negotiator@0.6.3", "", {}, "sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg=="],
 
     "neo-async": ["neo-async@2.6.2", "", {}, "sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw=="],
+
+    "nestjs-zod": ["nestjs-zod@5.0.0-beta.20250812T233646", "", { "dependencies": { "deepmerge": "^4.3.1" }, "peerDependencies": { "@nestjs/common": "^10.0.0 || ^11.0.0", "@nestjs/swagger": "^7.4.2 || ^8.0.0 || ^11.0.0", "zod": "^3.25.0 || ^4.0.0" }, "optionalPeers": ["@nestjs/common", "@nestjs/swagger"] }, "sha512-GO3np01F5CpEeXeUBLeK0supk9NhejTo/6bOK41c383By/eymrlPlFuEWve8tFlchGNIp2ctNwDIN5p9O5Ve2A=="],
 
     "node-abi": ["node-abi@3.75.0", "", { "dependencies": { "semver": "^7.3.5" } }, "sha512-OhYaY5sDsIka7H7AtijtI9jwGYLyl29eQn/W623DiN/MIv5sUqc4g7BIDThX+gb7di9f6xK02nkp8sdfFWZLTg=="],
 
