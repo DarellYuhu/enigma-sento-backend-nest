@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,15 +14,15 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { ConfigService } from '@nestjs/config';
 import { format } from 'date-fns';
-import { S3Client } from 'bun';
 import { DownloadGroupDistributionDto } from './dto/download-group-distribution.dto';
+import { MinioService } from 'src/minio/minio.service';
 
 @Injectable()
 export class GroupDistributionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-    @Inject('S3_CLIENT') private minioS3: S3Client,
+    private readonly minio: MinioService,
   ) {}
 
   async create(payload: CreateGroupDistributionDto, workgroupId: string) {
@@ -101,14 +100,12 @@ export class GroupDistributionService {
     const path = `${basePath}/${filename}`;
     await Bun.$`tar -czf ${path} -C ${basePath} ${groupDistribution.code}`;
     const file = Bun.file(`${path}`);
-    await this.minioS3.write(filename, await file.arrayBuffer(), {
-      bucket: 'tmp',
-    });
+    await this.minio.putObject(
+      'tmp',
+      filename,
+      Buffer.from(await file.arrayBuffer()),
+    );
     await Bun.$`rm -rf ${basePath}/`;
-
-    return this.minioS3.presign(filename, {
-      bucket: 'tmp',
-      method: 'GET',
-    });
+    return await this.minio.presignedUrl('GET', 'tmp', filename);
   }
 }

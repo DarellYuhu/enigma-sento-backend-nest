@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,7 +7,6 @@ import { CreateStoryDto } from './dto/create-story.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { Story } from './schemas/story.schema';
-import { S3Client } from 'bun';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { UpdateSectionRequestDto } from './dto/updateSection-story.dto';
@@ -18,17 +16,18 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { UpdateStoryRequestDto } from './dto/update-story.dot';
 import { AddGeneratedContentDto } from './dto/add-generated-content.dto';
+import { MinioService } from 'src/minio/minio.service';
 
 @Injectable()
 export class StoryService {
   constructor(
     @InjectModel(Story.name) private story: Model<Story>,
-    @Inject('S3_CLIENT') private minioS3: S3Client,
     @InjectQueue('script-queue')
     private queue: Queue,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly asset: AssetService,
+    private readonly minio: MinioService,
   ) {}
 
   async create({ data, ...payload }: CreateStoryDto) {
@@ -75,21 +74,27 @@ export class StoryService {
       .find({ projectId })
       .sort({ createdAt: 'desc' })
       .lean();
-    const normalized = stories.map((item) => ({
-      ...item,
-      data: item.data
-        ? item.data.map((item) => ({
-            ...item,
-            images: item.images.map((image) => ({
-              ...image,
-              url: this.minioS3.presign(image.path, {
-                bucket: 'assets',
-                method: 'GET',
-              }),
-            })),
-          }))
-        : undefined,
-    }));
+    const normalized = await Promise.all(
+      stories.map(async (item) => ({
+        ...item,
+        data: item.data
+          ? await Promise.all(
+              item.data.map(async (item) => ({
+                ...item,
+                images: await Promise.all(
+                  item.images.map(async (image) => ({
+                    ...image,
+                    url: await this.minio.presignedGetObject(
+                      'assets',
+                      image.path,
+                    ),
+                  })),
+                ),
+              })),
+            )
+          : undefined,
+      })),
+    );
     return normalized;
   }
 
@@ -116,7 +121,7 @@ export class StoryService {
     if (data.deletedImages) {
       await Promise.all(
         data.deletedImages.map(async (image) => {
-          await this.minioS3.delete(image.path, { bucket: 'assets' });
+          await this.minio.removeObject('assets', image.path);
         }),
       );
     }
@@ -179,11 +184,8 @@ export class StoryService {
         sections.map(async (item) => ({
           ...item,
           images: await Promise.all(
-            item.images.map((imagePath) =>
-              this.minioS3.presign(imagePath.path, {
-                bucket: 'assets',
-                method: 'GET',
-              }),
+            item.images.map((image) =>
+              this.minio.presignedGetObject('assets', image.path),
             ),
           ),
         })),
@@ -191,8 +193,8 @@ export class StoryService {
       font: fonts[random(fonts.length - 1)],
       captions: story.captions ?? [],
       hashtags: story.hashtags ?? '',
-      sounds: musicPath.map((path) =>
-        this.minioS3.presign(path, { bucket: 'assets', method: 'GET' }),
+      sounds: musicPath.map(async (path) =>
+        this.minio.presignedGetObject('assets', path),
       ),
       groupDistribution: ContentDistribution.map((item) => {
         const distributionStory = item.DistributionStory.find(
@@ -253,10 +255,11 @@ export class StoryService {
         offset += amountOfContents;
         const captions = Buffer.from(texts.join('\n'), 'utf-8');
         await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} rm --recursive --force myminio/generated-content/${path}`;
-        await this.minioS3.write(`${path}/captions.txt`, captions, {
-          type: 'text/plain',
-          bucket: 'generated-content',
-        });
+        await this.minio.putObject(
+          'generated-content',
+          `${path}/captions.txt`,
+          captions,
+        );
         await Promise.all(
           filesPayload.map(
             async (file) =>
@@ -281,7 +284,7 @@ export class StoryService {
         data.data.map((item) =>
           Promise.all(
             item.images.map(async (image) => {
-              await this.minioS3.delete(image.path, { bucket: 'assets' });
+              await this.minio.removeObject('assets', image.path);
             }),
           ),
         ),

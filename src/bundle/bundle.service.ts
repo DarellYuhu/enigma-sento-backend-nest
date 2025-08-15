@@ -1,31 +1,23 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { S3Client } from 'bun';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { createWriteStream } from 'fs';
 import * as path from 'path';
 import archiver from 'archiver';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { UpdateBundleDto } from './dto/update-bundle.dto';
-import * as minio from 'minio';
 import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { subDays } from 'date-fns';
 import pLimit from 'p-limit';
+import { MinioService } from 'src/minio/minio.service';
 
 @Injectable()
 export class BundleService {
   private readonly NODE_ENV = process.env.NODE_ENV;
   private readonly MINIO_CLI = process.env.MINIO_CLIENT_COMMAND;
   private readonly logger = new Logger(BundleService.name);
-  private readonly minio = new minio.Client({
-    endPoint: process.env.MINIO_HOST || '',
-    port: parseInt(process.env.MINIO_PORT ?? ''),
-    useSSL: false,
-    accessKey: process.env.MINIO_ACCESS_KEY,
-    secretKey: process.env.MINIO_SECRET_KEY,
-  });
   constructor(
     private readonly scheduler: SchedulerRegistry,
     private readonly prisma: PrismaService,
-    @Inject('S3_CLIENT') private readonly minioS3: S3Client,
+    private readonly minio: MinioService,
   ) {}
 
   findAll({ folderId }: { folderId?: string }) {
@@ -51,10 +43,12 @@ export class BundleService {
       });
     const normalized = {
       ...data,
-      bundleFile: data.bundleFile.map((b) => ({
-        ...b.file,
-        url: this.minioS3.presign(b.file.fullPath),
-      })),
+      bundleFile: await Promise.all(
+        data.bundleFile.map(async (b) => ({
+          ...b.file,
+          url: await this.minio.presignedGetObject(b.file.path, b.file.bucket),
+        })),
+      ),
     };
     return normalized;
   }

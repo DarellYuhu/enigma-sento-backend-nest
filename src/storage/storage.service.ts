@@ -1,27 +1,19 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
-import { S3Client } from 'bun';
 import { isBefore, subDays } from 'date-fns';
-import * as minio from 'minio';
+import { MinioService } from 'src/minio/minio.service';
 
 @Injectable()
 export class StorageService {
   private readonly NODE_ENV = process.env.NODE_ENV;
   private readonly logger = new Logger(StorageService.name);
-  private readonly minio = new minio.Client({
-    endPoint: process.env.MINIO_HOST || '',
-    port: parseInt(process.env.MINIO_PORT || ''),
-    useSSL: false,
-    accessKey: process.env.MINIO_ACCESS_KEY,
-    secretKey: process.env.MINIO_SECRET_KEY,
-  });
   constructor(
-    @Inject('S3_CLIENT') private minioS3: S3Client,
+    private readonly minio: MinioService,
     private readonly scheduler: SchedulerRegistry,
   ) {}
 
   getUploadUrl(path: string) {
-    return this.minioS3.presign(path, { bucket: 'tmp', method: 'PUT' });
+    return this.minio.presignedPutObject('tmp', path);
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, {

@@ -1,9 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { S3Client } from 'bun';
+import { Injectable } from '@nestjs/common';
+import { MinioService } from 'src/minio/minio.service';
 
 @Injectable()
 export class ContentGeneratorService {
-  constructor(@Inject('S3_CLIENT') private minioS3: S3Client) {}
+  constructor(private readonly minio: MinioService) {}
 
   async generate(config: GeneratorConfig) {
     await Bun.write(`${config.basePath}/config.json`, JSON.stringify(config));
@@ -18,11 +18,8 @@ export class ContentGeneratorService {
         const arrBuff = await bunFile.arrayBuffer();
         const buff = Buffer.from(arrBuff);
         const fileName = path.replace(config.basePath, '');
-        await this.minioS3.delete(fileName, { bucket: 'generated-content' });
-        await this.minioS3.write(fileName, buff, {
-          bucket: 'generated-content',
-          type: bunFile.type,
-        });
+        await this.minio.removeObject('generated-content', fileName);
+        await this.minio.putObject('generated-content', fileName, buff);
       }),
     ).then(() => {
       console.log('Upload finished');

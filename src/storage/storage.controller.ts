@@ -6,8 +6,8 @@ export class StorageController {
   constructor(private readonly storageService: StorageService) {}
 
   @Get('upload')
-  getUploadUrl(@Query('path') path: string) {
-    const data = this.storageService.getUploadUrl(path);
+  async getUploadUrl(@Query('path') path: string) {
+    const data = await this.storageService.getUploadUrl(path);
     return { message: 'success', data };
   }
 

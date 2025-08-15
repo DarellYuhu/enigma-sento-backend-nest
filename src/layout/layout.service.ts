@@ -1,13 +1,11 @@
 import {
   BadRequestException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateLayoutDto } from './dto/create-layout.dto';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { S3Client } from 'bun';
 import {
   Shape,
   TemplateSchema,
@@ -22,14 +20,15 @@ import {
 } from 'canvas';
 import { AssetService } from 'src/asset/asset.service';
 import { FieldConfig } from 'types';
+import { MinioService } from 'src/minio/minio.service';
 
 @Injectable()
 export class LayoutService {
   constructor(
-    @Inject('S3_CLIENT') private minioS3: S3Client,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly asset: AssetService,
+    private readonly minio: MinioService,
   ) {}
 
   async upsert(payload: CreateLayoutDto, layoutId?: number) {
@@ -84,9 +83,10 @@ export class LayoutService {
           const file = await this.prisma.file.findUnique({
             where: { id: item.imageId },
           });
-          item.imageUrl = this.minioS3.presign(file!.fullPath, {
-            method: 'GET',
-          });
+          item.imageUrl = await this.minio.presignedGetObject(
+            file!.bucket,
+            file!.path,
+          );
         }
         return item;
       }),

@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,17 +9,17 @@ import { PrismaService } from 'src/core/prisma/prisma.service';
 import { StoryService } from 'src/story/story.service';
 import { shuffle } from 'lodash';
 import { Prisma, Story } from '@prisma/client';
-import { S3Client } from 'bun';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { MinioService } from 'src/minio/minio.service';
 
 @Injectable()
 export class ProjectService {
   constructor(
-    @Inject('S3_CLIENT') private minioS3: S3Client,
     @InjectModel('Story') private story: Model<Story>,
     private readonly prisma: PrismaService,
     private readonly storyService: StoryService,
+    private readonly minio: MinioService,
   ) {}
 
   async create(payload: CreateProjectRequestDto, userId: string) {
@@ -217,10 +216,11 @@ export class ProjectService {
                     (item) => item + ' ' + project.hashtags,
                   );
                   const captions = Buffer.from(texts.join('\n'), 'utf-8');
-                  await this.minioS3.write(`${path}/captions.txt`, captions, {
-                    type: 'text/plain',
-                    bucket: 'generated-content',
-                  });
+                  await this.minio.putObject(
+                    'generated-content',
+                    `${path}/captions.txt`,
+                    captions,
+                  );
                   return {
                     projectId,
                     session: index + 1,
