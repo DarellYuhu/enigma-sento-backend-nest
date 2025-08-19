@@ -17,6 +17,8 @@ import { Queue } from 'bullmq';
 import { UpdateStoryRequestDto } from './dto/update-story.dot';
 import { AddGeneratedContentDto } from './dto/add-generated-content.dto';
 import { MinioService } from 'src/minio/minio.service';
+import { AddContentWithSectionDto } from './dto/add-content-with-section.dto';
+import { fileTypeFromBuffer } from 'file-type';
 
 @Injectable()
 export class StoryService {
@@ -149,6 +151,73 @@ export class StoryService {
     return section;
   }
 
+  async addContentWithSection(id: string, payload: AddContentWithSectionDto) {
+    const story = await this.story.findById(id).lean();
+    const project = await this.prisma.project.findFirstOrThrow({
+      where: { Story: { some: { id: id } } },
+    });
+    if (!story) throw new NotFoundException('Story not found!');
+    let offset = 0;
+    const contentDist = await this.prisma.contentDistribution.findMany({
+      where: {
+        OR: [{ DistributionStory: { some: { storyId: id } } }, { storyId: id }],
+      },
+      include: { GroupDistribution: true, DistributionStory: true },
+    });
+
+    for (const content of contentDist) {
+      const distStory = content.DistributionStory.find(
+        (item) => item.storyId === id,
+      );
+      const amountOfContents =
+        content.DistributionStory.find((item) => item.storyId === id)
+          ?.amountOfContents ?? content.GroupDistribution.amontOfTroops;
+      const path =
+        project.allocationType === 'GENERIC'
+          ? `${content.path}/UG`
+          : content.path;
+      const texts = story
+        .captions!.slice(offset, amountOfContents + offset)
+        .map((item) => item + ' ' + story.hashtags);
+      const captions = Buffer.from(texts.join('\n'), 'utf-8');
+      await this.minio.putObject(
+        'generated-content',
+        `${path}/captions.txt`,
+        captions,
+      );
+      const files = await Promise.all(
+        Object.values(payload.files)
+          .map((section, sectionIdx) =>
+            section
+              .slice(offset, amountOfContents + offset)
+              .map(async (file, fileIdx) => ({
+                file,
+                fileName: `sort_${sectionIdx + 1}_${fileIdx + offset + 1}_${distStory!.offset + fileIdx + 1}.${(await fileTypeFromBuffer(file.buffer!))?.ext}`,
+              })),
+          )
+          .flat(),
+      );
+      offset += amountOfContents;
+      await Promise.all(
+        files.map(
+          async (item) =>
+            await this.minio.putObject(
+              'generated-content',
+              `${path}/${item.fileName}`,
+              item.file.buffer!,
+            ),
+        ),
+      );
+    }
+
+    const res = await this.story
+      .findByIdAndUpdate(id, {
+        generatorStatus: 'FINISHED',
+      })
+      .lean();
+    return res;
+  }
+
   async generate(storyId: string, withMusic?: boolean) {
     const story = await this.story.findById(storyId).lean();
     const project = await this.prisma.project.findFirstOrThrow({
@@ -254,7 +323,6 @@ export class StoryService {
           .map((item) => item + ' ' + story.hashtags);
         offset += amountOfContents;
         const captions = Buffer.from(texts.join('\n'), 'utf-8');
-        await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} rm --recursive --force myminio/generated-content/${path}`;
         await this.minio.putObject(
           'generated-content',
           `${path}/captions.txt`,
