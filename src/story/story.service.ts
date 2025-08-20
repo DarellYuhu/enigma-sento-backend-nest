@@ -16,9 +16,9 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { UpdateStoryRequestDto } from './dto/update-story.dot';
 import { AddGeneratedContentDto } from './dto/add-generated-content.dto';
-import { MinioService } from 'src/minio/minio.service';
 import { AddContentWithSectionDto } from './dto/add-content-with-section.dto';
 import { fileTypeFromBuffer } from 'file-type';
+import { MinioService } from 'src/core/minio/minio.service';
 
 @Injectable()
 export class StoryService {

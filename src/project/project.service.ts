@@ -11,7 +11,7 @@ import { shuffle } from 'lodash';
 import { Prisma, Story } from '@prisma/client';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { MinioService } from 'src/minio/minio.service';
+import { MinioService } from 'src/core/minio/minio.service';
 
 @Injectable()
 export class ProjectService {

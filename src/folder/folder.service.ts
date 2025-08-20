@@ -3,9 +3,9 @@ import { CreateFolderDto } from './dto/create-folder.dto';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { DownloadGroupsDto } from './dto/download-groups.dto';
 import { PassThrough } from 'stream';
-import { MinioService } from 'src/minio/minio.service';
 import slugify from 'slugify';
 import archiver from 'archiver';
+import { MinioService } from 'src/core/minio/minio.service';
 
 @Injectable()
 export class FolderService {

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { isBefore, subDays } from 'date-fns';
-import { MinioService } from 'src/minio/minio.service';
+import { MinioService } from 'src/core/minio/minio.service';
 
 @Injectable()
 export class StorageService {

@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma, Role } from '@prisma/client';
 import { UpdateProposalStatusDto } from './dto/updateStatus-proposal.dto';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
-import { MinioService } from 'src/minio/minio.service';
+import { MinioService } from 'src/core/minio/minio.service';
 
 @Injectable()
 export class ProposalService {

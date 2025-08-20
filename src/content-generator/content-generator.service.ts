@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MinioService } from 'src/minio/minio.service';
+import { MinioService } from 'src/core/minio/minio.service';
 
 @Injectable()
 export class ContentGeneratorService {

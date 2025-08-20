@@ -1,3 +1,6 @@
+generate-metadata:
+	bun src/generate-metadata.ts
+
 build:
 	docker build -t darellyuhu/sento-backend-staging:latest -f docker/staging/Dockerfile .
 

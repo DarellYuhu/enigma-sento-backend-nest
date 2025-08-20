@@ -7,7 +7,7 @@ import { UpdateBundleDto } from './dto/update-bundle.dto';
 import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { subDays } from 'date-fns';
 import pLimit from 'p-limit';
-import { MinioService } from 'src/minio/minio.service';
+import { MinioService } from 'src/core/minio/minio.service';
 
 @Injectable()
 export class BundleService {

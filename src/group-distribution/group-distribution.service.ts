@@ -7,7 +7,6 @@ import {
   CreateGroupDistributionDto,
   XlsxFileSchema,
 } from './dto/create-group-distribution.dto';
-import { UpdateGroupDistributionDto } from './dto/update-group-distribution.dto';
 import * as xlsx from 'xlsx';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { plainToInstance } from 'class-transformer';
@@ -15,7 +14,7 @@ import { validate } from 'class-validator';
 import { ConfigService } from '@nestjs/config';
 import { format } from 'date-fns';
 import { DownloadGroupDistributionDto } from './dto/download-group-distribution.dto';
-import { MinioService } from 'src/minio/minio.service';
+import { MinioService } from 'src/core/minio/minio.service';
 
 @Injectable()
 export class GroupDistributionService {
@@ -48,18 +47,6 @@ export class GroupDistributionService {
         }),
       ),
     );
-  }
-
-  findAll() {
-    return `This action returns all groupDistribution`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} groupDistribution`;
-  }
-
-  update(id: number, updateGroupDistributionDto: UpdateGroupDistributionDto) {
-    return `This action updates a #${id} groupDistribution`;
   }
 
   remove(id: string) {

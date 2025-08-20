@@ -20,7 +20,7 @@ import {
 } from 'canvas';
 import { AssetService } from 'src/asset/asset.service';
 import { FieldConfig } from 'types';
-import { MinioService } from 'src/minio/minio.service';
+import { MinioService } from 'src/core/minio/minio.service';
 
 @Injectable()
 export class LayoutService {

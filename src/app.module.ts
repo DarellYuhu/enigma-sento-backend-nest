@@ -26,7 +26,7 @@ import { FolderModule } from './folder/folder.module';
 import { BundleModule } from './bundle/bundle.module';
 import { MinioS3Module } from './core/minio-s3/minio-s3.module';
 import { ZodValidationPipe } from 'nestjs-zod';
-import { MinioModule } from './minio/minio.module';
+import { MinioModule } from './core/minio/minio.module';
 import { APP_PIPE } from '@nestjs/core';
 
 @Module({
