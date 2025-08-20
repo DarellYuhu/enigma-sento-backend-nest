@@ -12,6 +12,7 @@ import { CollectionService } from './collection.service';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 import { CreatePeopleDto } from './dto/create-people.dto';
+import { GetCollectionQueryDto } from './dto/get-collectio.dto';
 
 @Controller('collections')
 export class CollectionController {
@@ -36,8 +37,8 @@ export class CollectionController {
   }
 
   @Get()
-  async findAll(@Query('assetType') assetType: CollectionType) {
-    const data = await this.collectionService.findAll({ type: assetType });
+  async findAll(@Query() query: GetCollectionQueryDto) {
+    const data = await this.collectionService.findAll(query);
     return { message: 'success', data };
   }
 

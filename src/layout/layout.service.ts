@@ -13,6 +13,8 @@ import { AssetService } from 'src/asset/asset.service';
 import { FieldConfig } from 'types';
 import { MinioService } from 'src/core/minio/minio.service';
 import { UpsertLayoutDto } from './dto/upsert-layout.dto';
+import { GetLayoutQueryDto } from './dto/get-layout.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class LayoutService {
@@ -85,11 +87,18 @@ export class LayoutService {
     return layout;
   }
 
-  getAll(groupId?: number) {
+  getAll(query: GetLayoutQueryDto) {
+    const where: Prisma.LayoutWhereInput = {};
+    if (query.groupId) {
+      where.groupItem = {
+        ...(query.groupId && { some: { layoutGroupId: query.groupId } }),
+      };
+    }
+    if (query.search) {
+      where.name = { contains: query.search, mode: 'insensitive' };
+    }
     return this.prisma.layout.findMany({
-      where: {
-        groupItem: { ...(groupId && { some: { layoutGroupId: groupId } }) },
-      },
+      where,
       include: {
         creator: {
           select: {

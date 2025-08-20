@@ -8,9 +8,10 @@ import { CollectionService } from 'src/collection/collection.service';
 import { LayoutService } from 'src/layout/layout.service';
 import { FieldConfig, FieldMap, VarField } from 'types';
 import { ZipFile } from 'yazl';
-import { Folder } from '@prisma/client';
+import { Folder, Prisma } from '@prisma/client';
 import * as minio from 'minio';
 import { shuffle } from 'lodash';
+import { GetLayoutGroupDto } from './dto/get-layout-group.dto';
 
 @Injectable()
 export class LayoutGroupService {
@@ -42,8 +43,13 @@ export class LayoutGroupService {
     });
   }
 
-  async findAll() {
+  async findAll(query: GetLayoutGroupDto) {
+    const where: Prisma.LayoutGroupWhereInput = {};
+    if (query.search) {
+      where.name = { contains: query.search, mode: 'insensitive' };
+    }
     const data = await this.prisma.layoutGroup.findMany({
+      where,
       include: {
         _count: { select: { groupItem: true } },
       },
@@ -149,7 +155,7 @@ export class LayoutGroupService {
       withValues.push({ ...item, value, targetField });
     }
 
-    const templates = shuffle(await this.layout.getAll(groupId));
+    const templates = shuffle(await this.layout.getAll({ groupId }));
 
     const generatedImgs = await Promise.all(
       Array.from({ length: +iteration }).map((_, i) => {

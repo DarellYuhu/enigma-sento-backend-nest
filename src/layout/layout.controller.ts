@@ -6,10 +6,12 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   StreamableFile,
 } from '@nestjs/common';
 import { LayoutService } from './layout.service';
 import { UpsertLayoutDto } from './dto/upsert-layout.dto';
+import { GetLayoutQueryDto } from './dto/get-layout.dto';
 
 @Controller('layouts')
 export class LayoutController {
@@ -22,8 +24,9 @@ export class LayoutController {
   }
 
   @Get()
-  getAll() {
-    return this.layoutService.getAll();
+  getAll(@Query() query: GetLayoutQueryDto) {
+    console.log(query);
+    return this.layoutService.getAll(query);
   }
 
   @Get(':id')

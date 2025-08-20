@@ -15,15 +15,6 @@ type Section = {
   images: string[];
 };
 
-type CollectionType =
-  | 'IMAGE'
-  | 'MUSIC'
-  | 'COLOR'
-  | 'FONT'
-  | 'REP-IMAGE'
-  | 'REP-VIDEO'
-  | 'REP-BANNER';
-
 type GeneratorConfig = {
   sections: Section;
   captions: string[];

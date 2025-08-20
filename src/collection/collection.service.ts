@@ -6,6 +6,7 @@ import { Collection } from './schemas/collection.schema';
 import { Model, UpdateQuery } from 'mongoose';
 import { People } from './schemas/people.schema';
 import { CreatePeopleDto } from './dto/create-people.dto';
+import { GetCollectionQueryDto } from './dto/get-collectio.dto';
 
 @Injectable()
 export class CollectionService {
@@ -18,8 +19,13 @@ export class CollectionService {
     return this.collection.create(createCollectionDto);
   }
 
-  findAll(query: { type: CollectionType }) {
-    return this.collection.find({ type: query.type }).lean();
+  findAll(query: GetCollectionQueryDto) {
+    return this.collection
+      .find({
+        type: query.assetType,
+        ...(query.search && { name: { $regex: query.search, $options: 'i' } }),
+      })
+      .lean();
   }
 
   async createPeople(createPeopleDto: CreatePeopleDto) {

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { LayoutGroupService } from './layout-group.service';
 import { CreateLayoutGroupDto } from './dto/create-layout-group.dto';
+import { GetLayoutGroupDto } from './dto/get-layout-group.dto';
 
 @Controller('layout-groups')
 export class LayoutGroupController {
@@ -20,8 +21,8 @@ export class LayoutGroupController {
   }
 
   @Get()
-  findAll() {
-    return this.layoutGroupService.findAll();
+  findAll(@Query() query: GetLayoutGroupDto) {
+    return this.layoutGroupService.findAll(query);
   }
 
   @Post(':id/generate-contents')
