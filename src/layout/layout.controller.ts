@@ -9,15 +9,15 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { LayoutService } from './layout.service';
-import { CreateLayoutDto } from './dto/create-layout.dto';
+import { UpsertLayoutDto } from './dto/upsert-layout.dto';
 
 @Controller('layouts')
 export class LayoutController {
   constructor(private readonly layoutService: LayoutService) {}
 
   @Post()
-  async create(@Body() createLayoutDto: CreateLayoutDto) {
-    const data = await this.layoutService.upsert(createLayoutDto);
+  async create(@Body() payload: UpsertLayoutDto) {
+    const data = await this.layoutService.upsert(payload);
     return { message: 'success', data };
   }
 
@@ -32,11 +32,8 @@ export class LayoutController {
   }
 
   @Patch(':id')
-  async update(
-    @Body() updateLayoutDto: CreateLayoutDto,
-    @Param('id') id: string,
-  ) {
-    const data = await this.layoutService.upsert(updateLayoutDto, +id);
+  async update(@Body() payload: UpsertLayoutDto, @Param('id') id: string) {
+    const data = await this.layoutService.upsert(payload, +id);
     return { message: 'success', data };
   }
 

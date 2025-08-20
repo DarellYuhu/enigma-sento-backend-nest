@@ -1,16 +1,7 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { CreateLayoutDto } from './dto/create-layout.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import {
-  Shape,
-  TemplateSchema,
-  templateSchema,
-} from './schema/template.schema';
+import { Shape, TemplateSchema } from './schema/template.schema';
 import {
   createCanvas,
   deregisterAllFonts,
@@ -21,6 +12,7 @@ import {
 import { AssetService } from 'src/asset/asset.service';
 import { FieldConfig } from 'types';
 import { MinioService } from 'src/core/minio/minio.service';
+import { UpsertLayoutDto } from './dto/upsert-layout.dto';
 
 @Injectable()
 export class LayoutService {
@@ -31,13 +23,9 @@ export class LayoutService {
     private readonly minio: MinioService,
   ) {}
 
-  async upsert(payload: CreateLayoutDto, layoutId?: number) {
-    const valid = templateSchema.safeParse(payload.template);
-    if (!valid.success) {
-      throw new BadRequestException(valid.error);
-    }
+  async upsert(payload: UpsertLayoutDto, layoutId?: number) {
     await Promise.all(
-      valid.data.shapes.map(async (item, idx) => {
+      payload.template.shapes.map(async (item, idx) => {
         if (!item.imagePath) return;
         const name = `${Math.floor(Math.random() * 1000000000)}-${item.imagePath.split('/').pop()}`;
         await Bun.$`${this.config.get('MINIO_CLIENT_COMMAND')} mv myminio/tmp/${item.imagePath} myminio/assets/layout/${name}`;
@@ -49,26 +37,27 @@ export class LayoutService {
             fullPath: `/assets/layout/${name}`,
           },
         });
-        valid.data.shapes[idx].imageId = file.id;
-        valid.data.shapes[idx].imagePath = undefined;
+        payload.template.shapes[idx].imageId = file.id;
+        payload.template.shapes[idx].imagePath = undefined;
       }),
     );
-    if (!layoutId) {
-      return await this.prisma.layout.create({
+    if (layoutId) {
+      await this.prisma.layout.update({
+        where: { id: layoutId },
         data: {
-          template: valid.data,
+          template: payload.template,
+          name: payload.name,
+        },
+      });
+    } else {
+      await this.prisma.layout.create({
+        data: {
+          template: payload.template,
           creatorId: payload.creatorId,
           name: payload.name,
         },
       });
     }
-    return await this.prisma.layout.update({
-      where: { id: layoutId },
-      data: {
-        template: valid.data,
-        name: payload.name,
-      },
-    });
   }
 
   async getOne(id: number) {

@@ -14,9 +14,11 @@ import { CreateStoryDto } from './dto/create-story.dto';
 import { UpdateSectionRequestDto } from './dto/updateSection-story.dto';
 import { UpdateStoryRequestDto } from './dto/update-story.dot';
 import { AddGeneratedContentDto } from './dto/add-generated-content.dto';
-import { AddContentWithSectionSchema } from './dto/add-content-with-section.dto';
+import {
+  AddContentWithSectionSchema,
+  type AddContentWithSectionDto,
+} from './dto/add-content-with-section.dto';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
-import type { AddContentWithSectionDto } from './dto/add-content-with-section.dto';
 
 @Controller('stories')
 export class StoryController {

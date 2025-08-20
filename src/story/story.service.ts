@@ -192,7 +192,7 @@ export class StoryService {
               .slice(offset, amountOfContents + offset)
               .map(async (file, fileIdx) => ({
                 file,
-                fileName: `sort_${sectionIdx + 1}_${fileIdx + offset + 1}_${distStory!.offset + fileIdx + 1}.${(await fileTypeFromBuffer(file.buffer!))?.ext}`,
+                fileName: `sort_${sectionIdx + 1}_${distStory!.offset + fileIdx + 1}.${(await fileTypeFromBuffer(file.buffer!))?.ext}`,
               })),
           )
           .flat(),

@@ -13,10 +13,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { BundleService } from './bundle.service';
-import { downloadBundleSchema } from './dto/download-bundle.dto';
+import {
+  downloadBundleSchema,
+  type DownloadBundleDto,
+} from './dto/download-bundle.dto';
 import { UpdateBundleDto } from './dto/update-bundle.dto';
 import type { Response } from 'express';
-import type { DownloadBundleDto } from './dto/download-bundle.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { parseXlsxToObject } from 'src/core/utils';
 import { validXlsxSchema } from './dto/valid-xlsx.schema';
