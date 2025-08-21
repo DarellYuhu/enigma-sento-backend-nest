@@ -46,7 +46,7 @@ export class BundleService {
       bundleFile: await Promise.all(
         data.bundleFile.map(async (b) => ({
           ...b.file,
-          url: await this.minio.presignedGetObject(b.file.path, b.file.bucket),
+          url: await this.minio.presignedGetObject(b.file.bucket, b.file.path),
         })),
       ),
     };

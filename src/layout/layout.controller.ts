@@ -25,7 +25,6 @@ export class LayoutController {
 
   @Get()
   getAll(@Query() query: GetLayoutQueryDto) {
-    console.log(query);
     return this.layoutService.getAll(query);
   }
 
