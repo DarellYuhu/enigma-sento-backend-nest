@@ -23,7 +23,7 @@ export class StorageService {
     if (this.NODE_ENV === 'development')
       this.scheduler.deleteCronJob('cleanup-storage-scheduler');
 
-    const oneWeekAgo = subDays(new Date(), 5);
+    const threeDaysAgo = subDays(new Date(), 3);
     const tmpObjects: string[] = [];
     const generatedObjects: string[] = [];
 
@@ -39,7 +39,7 @@ export class StorageService {
     const generatedStreamPromise = new Promise<void>((resolve, reject) => {
       const stream = this.minio.listObjectsV2('generated-content', '', true);
       stream.on('data', (obj) => {
-        if (isBefore(obj.lastModified!, oneWeekAgo)) {
+        if (isBefore(obj.lastModified!, threeDaysAgo)) {
           generatedObjects.push(obj.name!);
         }
       });
