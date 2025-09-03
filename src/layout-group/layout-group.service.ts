@@ -157,7 +157,7 @@ export class LayoutGroupService {
 
     const templates = shuffle(await this.layout.getAll({ groupId }));
 
-    const generatedImgs = await Promise.all(
+    const generatedImgs = await Promise.allSettled(
       Array.from({ length: +iteration }).map((_, i) => {
         return this.layout.generateImage(templates[i % templates.length].id, {
           templateConfig: withValues,
@@ -165,6 +165,9 @@ export class LayoutGroupService {
         });
       }),
     );
+    const passedImage = generatedImgs
+      .filter((item) => item.status === 'fulfilled')
+      .map((item) => item.value);
 
     if (folder) {
       const bundle = await this.prisma.bundle.create({
@@ -172,7 +175,7 @@ export class LayoutGroupService {
       });
       const bucket = 'generated-content';
       const files = await Promise.all(
-        generatedImgs.map(async (img, idx) => {
+        passedImage.map(async (img, idx) => {
           const name = `img-${idx}.png`;
           const path = `folder/${folder.slug}/${bundle.name}/${name}`;
           await this.minio.putObject(bucket, path, img);
@@ -207,7 +210,7 @@ export class LayoutGroupService {
       });
     } else {
       const zip = new ZipFile();
-      generatedImgs.forEach((img, i) => {
+      passedImage.forEach((img, i) => {
         zip.addBuffer(img, `img-${i}.png`);
       });
       zip.end();

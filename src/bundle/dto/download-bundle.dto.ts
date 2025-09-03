@@ -22,7 +22,7 @@ import z from 'zod/v4';
 
 export const downloadBundleSchema = z
   .object({
-    count: z.number().positive(),
+    count: z.coerce.number().positive(),
     groupKeys: multerFileSchema,
     bundleIds: z.array(z.string()),
   })
