@@ -28,6 +28,7 @@ import { MinioS3Module } from './core/minio-s3/minio-s3.module';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { MinioModule } from './core/minio/minio.module';
 import { APP_PIPE } from '@nestjs/core';
+import { StatisticModule } from './statistic/statistic.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { APP_PIPE } from '@nestjs/core';
         dbName: 'enigma-sento',
       }),
     }),
+    StatisticModule,
   ],
   controllers: [AppController],
   providers: [Logger, { provide: APP_PIPE, useClass: ZodValidationPipe }],
