@@ -112,6 +112,7 @@ model Story {
   ContentDistribution ContentDistribution[]
   DistributionStory   DistributionStory[]
   Project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Content             Content[]
 }
 
 model DistributionStory {
@@ -126,20 +127,48 @@ model DistributionStory {
 }
 
 model ContentDistribution {
-  session               Int
-  path                  String
+  id        String   @id @default(uuid())
+  session   Int
+  path      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  storyId               String?
   workgroupId           String
   groupDistributionCode String
-  storyId               String?
-  id                    String              @id @default(uuid())
   projectId             String
-  GroupDistribution     GroupDistribution   @relation(fields: [groupDistributionCode], references: [id])
-  Project               Project             @relation(fields: [projectId], references: [id])
-  Story                 Story?              @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  Workgroup             Workgroup           @relation(fields: [workgroupId], references: [id])
-  DistributionStory     DistributionStory[]
+
+  GroupDistribution GroupDistribution   @relation(fields: [groupDistributionCode], references: [id])
+  Project           Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Workgroup         Workgroup           @relation(fields: [workgroupId], references: [id])
+  DistributionStory DistributionStory[]
+  content           Content[]
+  Story             Story?              @relation(fields: [storyId], references: [id])
 
   @@unique([workgroupId, groupDistributionCode, session, projectId, storyId], name: "uniqueConstraint")
+}
+
+model Content {
+  id          String  @id @default(uuid())
+  isGenerated Boolean @default(false)
+
+  contentDistributionId String
+  storyId               String
+
+  contentFile         ContentFile[]
+  contentDistribution ContentDistribution @relation(fields: [contentDistributionId], references: [id], onDelete: Cascade)
+  story               Story               @relation(fields: [storyId], references: [id], onDelete: Cascade)
+}
+
+model ContentFile {
+  id        Int    @id @default(autoincrement())
+  contentId String
+  fileId    Int
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  file    File    @relation(fields: [fileId], references: [id])
+
+  @@unique([contentId, fileId])
 }
 
 model Proposal {
@@ -156,7 +185,7 @@ model Proposal {
   workgroupId     String
   Approver        User?          @relation("Approver", fields: [approverId], references: [id])
   Author          User           @relation("Author", fields: [authorId], references: [id])
-  Project         Project?       @relation(fields: [projectId], references: [id])
+  Project         Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   FinalSubmission Submission?    @relation("finalSubmission", fields: [submissionId], references: [id])
   Workgroup       Workgroup      @relation(fields: [workgroupId], references: [id])
   Submission      Submission[]   @relation("Submission")
@@ -224,10 +253,11 @@ model File {
   bucket   String
   fullPath String
 
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  bundleFile BundleFile[]
-  Bundle     Bundle[]     @relation(name: "captionFile")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  bundleFile  BundleFile[]
+  Bundle      Bundle[]      @relation(name: "captionFile")
+  ContentFile ContentFile[]
 }
 
 model Folder {

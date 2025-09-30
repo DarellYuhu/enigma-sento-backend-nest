@@ -19,6 +19,7 @@ import { AddGeneratedContentDto } from './dto/add-generated-content.dto';
 import { AddContentWithSectionDto } from './dto/add-content-with-section.dto';
 import { fileTypeFromBuffer } from 'file-type';
 import { MinioService } from 'src/core/minio/minio.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class StoryService {
@@ -156,14 +157,15 @@ export class StoryService {
     const project = await this.prisma.project.findFirstOrThrow({
       where: { Story: { some: { id: id } } },
     });
-    if (!story) throw new NotFoundException('Story not found!');
+    if (!story) throw new NotFoundException('Story not found');
     let offset = 0;
-    const contentDist = await this.prisma.contentDistribution.findMany({
-      where: {
-        OR: [{ DistributionStory: { some: { storyId: id } } }, { storyId: id }],
-      },
-      include: { GroupDistribution: true, DistributionStory: true },
-    });
+    const contentDist = await this.findContentDistribution(id);
+    const contentTemplates = contentDist.flatMap((item) => item.content);
+    const huhi = new Map<
+      number,
+      { contentId: string; files: Prisma.FileCreateManyInput[] }
+    >();
+    const bucket = 'generated-content';
 
     for (const content of contentDist) {
       const distStory = content.DistributionStory.find(
@@ -172,43 +174,80 @@ export class StoryService {
       const amountOfContents =
         content.DistributionStory.find((item) => item.storyId === id)
           ?.amountOfContents ?? content.GroupDistribution.amontOfTroops;
-      const path =
-        project.allocationType === 'GENERIC'
-          ? `${content.path}/UG`
-          : content.path;
+      const path = this.getPath(project.allocationType, content.path);
       const texts = story
         .captions!.slice(offset, amountOfContents + offset)
         .map((item) => item + ' ' + story.hashtags);
       const captions = Buffer.from(texts.join('\n'), 'utf-8');
-      await this.minio.putObject(
-        'generated-content',
-        `${path}/captions.txt`,
-        captions,
-      );
+      await this.minio.putObject(bucket, `${path}/captions.txt`, captions);
       const files = await Promise.all(
         Object.values(payload.files)
           .map((section, sectionIdx) =>
             section
               .slice(offset, amountOfContents + offset)
-              .map(async (file, fileIdx) => ({
-                file,
-                fileName: `sort_${sectionIdx + 1}_${distStory!.offset + fileIdx + 1}.${(await fileTypeFromBuffer(file.buffer!))?.ext}`,
-              })),
+              .map(async (file, fileIdx) => {
+                const currentIndex = fileIdx + offset;
+                const fileName = `sort_${sectionIdx + 1}_${distStory!.offset + fileIdx + 1}.${(await fileTypeFromBuffer(file.buffer!))?.ext}`;
+                const isExist = huhi.has(currentIndex);
+                const fileMetadata = {
+                  bucket,
+                  fullPath: `${bucket}/${path}/${fileName}`,
+                  path: `${path}/${fileName}`,
+                  name: fileName,
+                };
+                if (isExist) {
+                  const currVal = huhi.get(currentIndex);
+                  currVal!.files.push(fileMetadata);
+                  huhi.set(currentIndex, currVal!);
+                } else
+                  huhi.set(currentIndex, {
+                    files: [fileMetadata],
+                    contentId: contentTemplates[currentIndex].id,
+                  });
+                return {
+                  file,
+                  fileName,
+                };
+              }),
           )
           .flat(),
       );
       offset += amountOfContents;
       await Promise.all(
-        files.map(
-          async (item) =>
-            await this.minio.putObject(
-              'generated-content',
-              `${path}/${item.fileName}`,
-              item.file.buffer!,
-            ),
-        ),
+        files.map(async (item) => {
+          await this.minio.putObject(
+            'generated-content',
+            `${path}/${item.fileName}`,
+            item.file.buffer!,
+          );
+        }),
       );
     }
+
+    await this.prisma.$transaction(async (prisma) => {
+      const files = await prisma.file.createManyAndReturn({
+        data: Array.from(huhi).flatMap(([_, val]) =>
+          val.files.map((item) => item),
+        ),
+      });
+      await Promise.all(
+        Array.from(huhi).map(([_, val]) =>
+          prisma.content.update({
+            where: { id: val.contentId },
+            data: {
+              contentFile: {
+                createMany: {
+                  data: val.files.map((file) => ({
+                    ...file,
+                    fileId: files.find((x) => x.path === file.path)!.id,
+                  })),
+                },
+              },
+            },
+          }),
+        ),
+      );
+    });
 
     const res = await this.story
       .findByIdAndUpdate(id, {
@@ -298,12 +337,7 @@ export class StoryService {
     )
       throw new BadRequestException('Not enough files or captions');
     let offset = 0;
-    const ContentDistribution = await this.prisma.contentDistribution.findMany({
-      where: {
-        OR: [{ DistributionStory: { some: { storyId } } }, { storyId }],
-      },
-      include: { GroupDistribution: true, DistributionStory: true },
-    });
+    const ContentDistribution = await this.findContentDistribution(storyId);
     await Promise.all(
       ContentDistribution.map(async (content) => {
         const amountOfContents =
@@ -358,5 +392,25 @@ export class StoryService {
         ),
       );
     return await this.prisma.story.delete({ where: { id } });
+  }
+
+  private getPath(allocationType: string, path: string) {
+    return allocationType === 'GENERIC' ? `${path}/UG` : path;
+  }
+  private findContentDistribution(storyId: string) {
+    return this.prisma.contentDistribution.findMany({
+      where: {
+        OR: [{ DistributionStory: { some: { storyId } } }, { storyId }],
+      },
+      include: {
+        GroupDistribution: true,
+        DistributionStory: true,
+        content: {
+          where: {
+            storyId,
+          },
+        },
+      },
+    });
   }
 }

@@ -107,39 +107,9 @@ export class ProjectService {
   }
 
   async generateDistribution(projectId: string) {
-    const project = await this.prisma.project.findFirstOrThrow({
-      where: { id: projectId },
-      include: {
-        Story: true,
-        Workgroup: {
-          select: {
-            projectStoryPerUser: true,
-            session: true,
-            TaskHistory: {
-              select: {
-                WorkgroupUserTask: {
-                  include: { GroupDistribution: true },
-                  where: {
-                    WorkgroupUser: { Project: { some: { id: projectId } } },
-                  },
-                },
-              },
-              take: 1,
-              orderBy: { createdAt: 'desc' },
-            },
-          },
-        },
-      },
-    });
+    const project = await this.findProjectWithOtherData(projectId);
+    this.validateProject(project);
 
-    if (!project) throw new NotFoundException('Project or workgroup not found');
-    if (
-      project.Story.length < project.Workgroup.session ||
-      project.Story.length < project.Workgroup.projectStoryPerUser
-    )
-      throw new BadRequestException(
-        `Not enough stories. You need at least ${project.Workgroup.projectStoryPerUser} stories`,
-      );
     const {
       Story: prismaStory,
       workgroupId,
@@ -165,7 +135,14 @@ export class ProjectService {
               async (
                 _,
                 index,
-              ): Promise<Prisma.ContentDistributionUncheckedCreateInput> => {
+              ): Promise<
+                Prisma.ContentDistributionUncheckedCreateInput & {
+                  storyCandidate?: Omit<
+                    Prisma.DistributionStoryCreateManyInput,
+                    'contentDistributionId'
+                  >[];
+                }
+              > => {
                 randomizedStory = shuffle(randomizedStory);
                 const path = `${code}/${project.name}/${index + 1}`;
 
@@ -187,7 +164,7 @@ export class ProjectService {
                     storyIndex = (storyIndex + 1) % randomizedStory.length;
                   });
 
-                  const payload = Array.from(mappedStory).map(
+                  const storyCandidate = Array.from(mappedStory).map(
                     ([storyId, amountOfContents]) => {
                       const data = {
                         amountOfContents,
@@ -198,7 +175,7 @@ export class ProjectService {
                       return data;
                     },
                   );
-                  payload.forEach((item) => {
+                  storyCandidate.forEach((item) => {
                     if (contentForEachStory.has(item.storyId)) {
                       const value = contentForEachStory.get(item.storyId);
                       contentForEachStory.set(
@@ -227,8 +204,9 @@ export class ProjectService {
                     groupDistributionCode: groupDistributionId,
                     workgroupId: workgroupId,
                     path,
+                    storyCandidate,
                     DistributionStory: {
-                      createMany: { data: payload },
+                      createMany: { data: storyCandidate },
                     },
                   };
                 }
@@ -251,10 +229,24 @@ export class ProjectService {
                 const data = {
                   session: index + 1,
                   groupDistributionCode: groupDistributionId,
-                  storyId: randomizedStory[storyIndex].id,
+                  // storyId: randomizedStory[storyIndex].id,
                   workgroupId: workgroupId,
                   path,
                   projectId,
+                  content: {
+                    createMany: {
+                      data: Array.from({ length: amontOfTroops }).map(() => ({
+                        storyId: randomizedStory[storyIndex].id,
+                      })),
+                    },
+                  },
+                  DistributionStory: {
+                    create: {
+                      storyId: randomizedStory[storyIndex].id,
+                      amountOfContents: amontOfTroops,
+                      offset: 0,
+                    },
+                  },
                 };
                 storyIndex = (storyIndex + 1) % randomizedStory.length;
                 return data;
@@ -278,8 +270,24 @@ export class ProjectService {
       }),
     );
 
-    const contentDistributionTransaction = payload.map((item) =>
-      this.prisma.contentDistribution.create({ data: item }),
+    const contentDistributionTransaction = payload.map(
+      ({ storyCandidate, ...item }) =>
+        this.prisma.contentDistribution.create({
+          data: {
+            ...item,
+            ...(storyCandidate && {
+              content: {
+                createMany: {
+                  data: storyCandidate.flatMap((item) =>
+                    Array.from({ length: item.amountOfContents }).map(() => ({
+                      storyId: item.storyId,
+                    })),
+                  ),
+                },
+              },
+            }),
+          },
+        }),
     );
 
     const updateProjectStatus = this.prisma.project.update({
@@ -291,5 +299,45 @@ export class ProjectService {
       ...contentDistributionTransaction,
       updateProjectStatus,
     ]);
+  }
+
+  private validateProject(
+    project: Awaited<ReturnType<typeof this.findProjectWithOtherData>>,
+  ) {
+    if (!project) throw new NotFoundException('Project or workgroup not found');
+    if (
+      project.Story.length < project.Workgroup.session ||
+      project.Story.length < project.Workgroup.projectStoryPerUser
+    )
+      throw new BadRequestException(
+        `Not enough stories. You need at least ${project.Workgroup.projectStoryPerUser} stories`,
+      );
+  }
+
+  private findProjectWithOtherData(id: string) {
+    return this.prisma.project.findFirstOrThrow({
+      where: { id },
+      include: {
+        Story: true,
+        Workgroup: {
+          select: {
+            projectStoryPerUser: true,
+            session: true,
+            TaskHistory: {
+              select: {
+                WorkgroupUserTask: {
+                  include: { GroupDistribution: true },
+                  where: {
+                    WorkgroupUser: { Project: { some: { id } } },
+                  },
+                },
+              },
+              take: 1,
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        },
+      },
+    });
   }
 }
