@@ -149,8 +149,9 @@ model ContentDistribution {
 }
 
 model Content {
-  id          String  @id @default(uuid())
-  isGenerated Boolean @default(false)
+  id          String   @id @default(uuid())
+  isGenerated Boolean  @default(false)
+  captions    String[]
 
   contentDistributionId String
   storyId               String
@@ -247,14 +248,15 @@ model LayoutGroup {
 }
 
 model File {
-  id       Int    @id @default(autoincrement())
-  name     String
-  path     String
-  bucket   String
-  fullPath String
+  id        Int      @id @default(autoincrement())
+  name      String
+  path      String
+  bucket    String
+  fullPath  String   @unique
+  isTmp     Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
   bundleFile  BundleFile[]
   Bundle      Bundle[]      @relation(name: "captionFile")
   ContentFile ContentFile[]

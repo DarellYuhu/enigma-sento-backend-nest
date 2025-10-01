@@ -5,7 +5,7 @@ export const AddContentWithSectionSchema = z
   .object({
     contentPerStory: z.number(),
     keys: z.array(z.string().nonempty()).nonempty(),
-    files: z.record(z.string(), z.array(multerFileSchema)),
+    files: z.record(z.string(), z.array(multerFileSchema).nonempty()),
   })
   .superRefine((val, ctx) => {
     for (const [section, files] of Object.entries(val.files)) {

@@ -157,52 +157,68 @@ export class StoryService {
     const project = await this.prisma.project.findFirstOrThrow({
       where: { Story: { some: { id: id } } },
     });
+
     if (!story) throw new NotFoundException('Story not found');
+    if (
+      (story.contentPerStory !== Object.values(payload.files)[0]?.length ||
+        (story.captions?.length || 0) < story.contentPerStory) &&
+      project.allocationType === 'SPECIFIC'
+    )
+      throw new BadRequestException('Not enough files or captions');
+
     let offset = 0;
     const contentDist = await this.findContentDistribution(id);
     const contentTemplates = contentDist.flatMap((item) => item.content);
-    const huhi = new Map<
-      number,
-      { contentId: string; files: Prisma.FileCreateManyInput[] }
-    >();
     const bucket = 'generated-content';
+    const captions = project.captions || story.captions;
+    const hashtags = project.hashtags || story.hashtags;
+    const contentFiles = new Map<
+      number,
+      {
+        contentId: string;
+        captions: string[];
+        files: Prisma.FileCreateManyInput[];
+      }
+    >();
 
     for (const content of contentDist) {
+      const path = this.getPath(project.allocationType, content.path);
       const distStory = content.DistributionStory.find(
         (item) => item.storyId === id,
       );
       const amountOfContents =
         content.DistributionStory.find((item) => item.storyId === id)
           ?.amountOfContents ?? content.GroupDistribution.amontOfTroops;
-      const path = this.getPath(project.allocationType, content.path);
-      const texts = story
-        .captions!.slice(offset, amountOfContents + offset)
-        .map((item) => item + ' ' + story.hashtags);
-      const captions = Buffer.from(texts.join('\n'), 'utf-8');
-      await this.minio.putObject(bucket, `${path}/captions.txt`, captions);
+      const texts = captions
+        .slice(offset, amountOfContents + offset)
+        .map((item) => item + ' ' + hashtags);
+      const captionBuff = Buffer.from(texts.join('\n'), 'utf-8');
+      await this.minio.putObject(bucket, `${path}/captions.txt`, captionBuff);
       const files = await Promise.all(
         Object.values(payload.files)
           .map((section, sectionIdx) =>
             section
               .slice(offset, amountOfContents + offset)
               .map(async (file, fileIdx) => {
-                const currentIndex = fileIdx + offset;
+                const currentFileIndex = fileIdx + offset;
                 const fileName = `sort_${sectionIdx + 1}_${distStory!.offset + fileIdx + 1}.${(await fileTypeFromBuffer(file.buffer!))?.ext}`;
-                const isExist = huhi.has(currentIndex);
+                const isExist = contentFiles.has(currentFileIndex);
                 const fileMetadata = {
                   bucket,
                   fullPath: `${bucket}/${path}/${fileName}`,
                   path: `${path}/${fileName}`,
                   name: fileName,
+                  isTmp: true,
                 };
                 if (isExist) {
-                  const currVal = huhi.get(currentIndex);
+                  const currVal = contentFiles.get(currentFileIndex);
                   currVal!.files.push(fileMetadata);
-                  huhi.set(currentIndex, currVal!);
+                  contentFiles.set(currentFileIndex, currVal!);
                 } else
-                  huhi.set(currentIndex, {
+                  contentFiles.set(currentFileIndex, {
                     files: [fileMetadata],
-                    contentId: contentTemplates[currentIndex].id,
+                    contentId: contentTemplates[currentFileIndex].id,
+                    captions: texts,
                   });
                 return {
                   file,
@@ -225,22 +241,29 @@ export class StoryService {
     }
 
     await this.prisma.$transaction(async (prisma) => {
-      const files = await prisma.file.createManyAndReturn({
-        data: Array.from(huhi).flatMap(([_, val]) =>
-          val.files.map((item) => item),
-        ),
+      const filePayload = Array.from(contentFiles).flatMap(([_, val]) =>
+        val.files.map((item) => item),
+      );
+      await prisma.file.createMany({
+        data: filePayload,
+        skipDuplicates: true,
+      });
+      const files = await prisma.file.findMany({
+        where: { fullPath: { in: filePayload.map((item) => item.fullPath) } },
       });
       await Promise.all(
-        Array.from(huhi).map(([_, val]) =>
+        Array.from(contentFiles).map(([_, val]) =>
           prisma.content.update({
             where: { id: val.contentId },
             data: {
+              isGenerated: true,
+              captions: val.captions,
               contentFile: {
                 createMany: {
                   data: val.files.map((file) => ({
-                    ...file,
-                    fileId: files.find((x) => x.path === file.path)!.id,
+                    fileId: files.find((x) => x.fullPath === file.fullPath)!.id,
                   })),
+                  skipDuplicates: true,
                 },
               },
             },
