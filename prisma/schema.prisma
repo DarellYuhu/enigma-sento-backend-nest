@@ -96,7 +96,7 @@ model Project {
   captions            String[]
   hashtags            String?
   createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @default(now()) @updatedAt
+  updatedAt           DateTime              @updatedAt
   ContentDistribution ContentDistribution[]
   Workgroup           Workgroup             @relation(fields: [workgroupId], references: [id])
   WorkgroupUser       WorkgroupUser         @relation(fields: [workgroupUserId], references: [id])
@@ -131,7 +131,7 @@ model ContentDistribution {
   session   Int
   path      String
   createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  updatedAt DateTime @updatedAt
 
   storyId               String?
   workgroupId           String
