@@ -152,6 +152,8 @@ model Content {
   id          String   @id @default(uuid())
   isGenerated Boolean  @default(false)
   captions    String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   contentDistributionId String
   storyId               String
