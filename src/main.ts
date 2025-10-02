@@ -25,6 +25,7 @@ async function bootstrap() {
   app.enableCors({
     origin: envConfig.get('ALLOWED_ORIGINS').split(','),
     exposedHeaders: ['Content-Disposition'],
+    allowedHeaders: ['X-API-KEY'],
   });
   await SwaggerModule.loadPluginMetadata(metadata);
   const document = SwaggerModule.createDocument(app, swaggerConfig);

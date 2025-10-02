@@ -29,6 +29,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { MinioModule } from './core/minio/minio.module';
 import { APP_PIPE } from '@nestjs/core';
 import { StatisticModule } from './statistic/statistic.module';
+import { ContentModule } from './content/content.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { StatisticModule } from './statistic/statistic.module';
       }),
     }),
     StatisticModule,
+    ContentModule,
   ],
   controllers: [AppController],
   providers: [Logger, { provide: APP_PIPE, useClass: ZodValidationPipe }],

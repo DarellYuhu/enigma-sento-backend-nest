@@ -12,7 +12,13 @@ export class AuthGuard implements CanActivate {
   constructor(private readonly jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest() as Request;
+    const apiKey = request.headers['x-api-key'] as string;
+    if (apiKey) {
+      const isValid = this.validateWithApiKey(apiKey);
+      if (isValid) return true;
+      else throw new UnauthorizedException('Invalid token');
+    }
     const token = this.extractTokenFromHeader(request);
     if (!token) throw new UnauthorizedException('Token not found');
     try {
@@ -22,6 +28,11 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid token');
     }
     return true;
+  }
+
+  private validateWithApiKey(key: string) {
+    const targetKey = process.env.ALLOWED_API_KEYS?.split(',');
+    return targetKey?.includes(key);
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
