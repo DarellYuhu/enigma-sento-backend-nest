@@ -68,6 +68,7 @@ export class BundleService {
     const files = bundles.flatMap((bundle) =>
       bundle.bundleFile.map((f) => ({ ...f.file, bundleName: bundle.name })),
     );
+    console.log(files.length);
     const captions = (
       await Promise.all(
         bundles
@@ -94,21 +95,23 @@ export class BundleService {
     const folderId = bundles[0].folderId;
     const date = new Date().getTime();
     const limit = pLimit(25);
-    const putCaptions = Array.from(groupedCaptions).map(([key, val]) =>
-      limit(() =>
-        this.minio.putObject(
-          'generated-content',
-          `folder/${folderId}/${date}/${key}/captions.txt`,
-          val.join('\n'),
+    const putCaptions = Array.from(groupedCaptions).map(
+      async ([key, val]) =>
+        await limit(() =>
+          this.minio.putObject(
+            'generated-content',
+            `folder/${folderId}/${date}/${key}/captions.txt`,
+            val.join('\n'),
+          ),
         ),
-      ),
     );
-    const putImages = files.map(async (file, idx) => {
-      limit(
-        () =>
-          Bun.$`${this.MINIO_CLI} cp myminio/${file.fullPath} myminio/generated-content/folder/${folderId}/${date}/${groupKeys[idx % count]}/${file.bundleName}-${file.name}`,
-      );
-    });
+    const putImages = files.map(
+      async (file, idx) =>
+        await limit(
+          () =>
+            Bun.$`${this.MINIO_CLI} cp myminio/${file.fullPath} myminio/generated-content/folder/${folderId}/${date}/${groupKeys[idx % count]}/${file.bundleName}-${file.name}`,
+        ),
+    );
     await Promise.all([...putCaptions, ...putImages]);
     if (keys.groupKeys) {
       await this.prisma.generatedGroup.create({
